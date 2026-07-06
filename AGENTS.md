@@ -10,7 +10,10 @@ slides-grab is an agent-first PPT framework. AI agents write HTML slides directl
 
 | Path | Purpose |
 |------|---------|
-| `skills/slides-grab-plan/SKILL.md` | Codex plan skill (outline workflow) |
+| `skills/slides-grab/SKILL.md` | Router skill — picks HTML or image-native pipeline |
+| `skills/slides-grab-html/SKILL.md` | HTML-mode pipeline (semantic slides + bespoke hero imagery) |
+| `skills/slides-grab-image/SKILL.md` | Image-native pipeline (whole-slide rasters via `generate-images`) |
+| `skills/slides-grab-plan/SKILL.md` | Stage 1 plan skill (outline workflow) |
 | `skills/slides-grab-design/SKILL.md` | Codex design skill (HTML slides + viewer loop) |
 | `skills/slides-grab-export/SKILL.md` | Codex conversion skill (PDF + experimental / unstable HTML→PPTX/Figma) |
 | `skills/slides-grab-design/references/design-gate.md` | Design gate spec — severity rubric, seven checks (incl. 6b Korean word-break and Review Litmus), dialectical dual-oracle Visual QA loop (render evidence → Pass A System Contract / Constraint Integrity + Pass B Audience Impact / Expressive Readability → synthesized verdict → fix/re-render/re-review until Proceed or Rethink), rule→side-effect→compensation matrix (12 rows), evidence-before-shipping, design-debt log, gate report/verdict (runs after validate, before export) |
@@ -45,9 +48,12 @@ slides-grab is an agent-first PPT framework. AI agents write HTML slides directl
 
 | Skill | Role | Stage |
 |-------|------|-------|
-| `slides-grab-plan` | Codex Stage 1 outline planning | Stage 1 |
-| `slides-grab-design` | Codex Stage 2 slide design/review | Stage 2 |
-| `slides-grab-export` | Codex Stage 3 conversion (PDF + experimental / unstable PPTX/Figma) | Stage 3 |
+| `slides-grab` | Router — picks HTML or image-native pipeline, then runs shared stages | All |
+| `slides-grab-html` | HTML-mode pipeline (semantic slides + bespoke hero imagery via `slides-grab image`) | 2 |
+| `slides-grab-image` | Image-native pipeline (whole-slide rasters via `slides-grab generate-images`) | 2 |
+| `slides-grab-plan` | Stage 1 outline planning | Stage 1 |
+| `slides-grab-design` | Stage 2 slide design/review (shared design rules + gate) | Stage 2 |
+| `slides-grab-export` | Stage 3 conversion (PDF + experimental / unstable PPTX/Figma) | Stage 3 |
 
 ## Dependencies
 

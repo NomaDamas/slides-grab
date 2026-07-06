@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 export const INSTALLABLE_SKILLS = [
   'skills/slides-grab/SKILL.md',
+  'skills/slides-grab-html/SKILL.md',
+  'skills/slides-grab-image/SKILL.md',
   'skills/slides-grab-plan/SKILL.md',
   'skills/slides-grab-design/SKILL.md',
   'skills/slides-grab-export/SKILL.md',
