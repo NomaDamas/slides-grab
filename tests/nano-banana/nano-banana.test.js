@@ -47,6 +47,7 @@ test('parseNanoBananaCliArgs applies god-tibo image generation defaults', () => 
     baseUrl: '',
     apiKeyEnv: '',
     help: false,
+    referenceImages: [],
   });
 });
 
@@ -120,6 +121,7 @@ test('parseNanoBananaCliArgs reads explicit options and rejects invalid values',
       baseUrl: '',
       apiKeyEnv: '',
       help: false,
+      referenceImages: [],
     },
   );
 

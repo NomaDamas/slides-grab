@@ -79,6 +79,7 @@ export function getNanoBananaUsage() {
     '  -h, --help              Show this help text',
     '  --base-url <url>      Codex/OpenAI-compatible base URL (default: OPENAI_IMAGE_BASE_URL, OPENAI_BASE_URL, then https://api.openai.com/v1)',
     '  --api-key-env <name>   Env var to read for Codex/OpenAI-compatible provider API key',
+    '  --reference <path>     Reference image path(s) for style-guided generation (god-tibo only, repeatable)',
     '',
     'Auth:',
     '  Default (god-tibo): run `codex login` once to populate ~/.codex/auth.json. No OpenAI/Google API key required;',
@@ -104,6 +105,7 @@ export function parseNanoBananaCliArgs(argv) {
     help: false,
     baseUrl: '',
     apiKeyEnv: '',
+    referenceImages: [],
   };
 
   const args = Array.isArray(argv) ? [...argv] : [];
@@ -213,6 +215,21 @@ export function parseNanoBananaCliArgs(argv) {
     }
     if (arg.startsWith('--api-key-env=')) {
       parsed.apiKeyEnv = arg.slice('--api-key-env='.length);
+      continue;
+    }
+
+
+    if (arg === '--reference' || arg === '--reference-image') {
+      parsed.referenceImages.push(readOptionValue(args, i, arg));
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith('--reference=')) {
+      parsed.referenceImages.push(arg.slice('--reference='.length));
+      continue;
+    }
+    if (arg.startsWith('--reference-image=')) {
+      parsed.referenceImages.push(arg.slice('--reference-image='.length));
       continue;
     }
 
@@ -657,6 +674,7 @@ async function generateGodTiboFallbackImage({ options, generateGodTiboImageImpl 
     model: options.model && options.model.trim() ? options.model : DEFAULT_GOD_TIBO_MODEL,
     aspectRatio: options.aspectRatio,
     providerMode: GOD_TIBO_PROVIDER_AUTO,
+    referenceImages: options.referenceImages || [],
   });
 }
 

@@ -1,5 +1,6 @@
-import { mkdir, readFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, readFile as readFileAsync, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 
@@ -65,12 +66,50 @@ export function getGodTiboFallbackMessage(reason) {
   return `${summary} god-tibo-imagen is the default image provider and reuses your local Codex ChatGPT login (~/.codex/auth.json). Run \`codex login\` once to enable it. Optional fallbacks: set OPENAI_API_KEY (Codex/OpenAI gpt-image-2) or GOOGLE_API_KEY/GEMINI_API_KEY (Nano Banana). If image generation credentials are unavailable, use web search and download the chosen image into ./assets/<file>.`;
 }
 
+const MIME_BY_EXTENSION = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+};
+
+/**
+ * Read reference image file paths into data URLs suitable for the Codex
+ * /responses input_image blocks. Accepts absolute paths or paths relative
+ * to process.cwd(). Already-formed data: URLs and http(s) URLs are passed
+ * through as-is.
+ */
+export async function resolveReferenceImages(paths) {
+  const list = Array.isArray(paths) ? paths : [];
+  const dataUrls = [];
+  for (const entry of list) {
+    if (typeof entry !== 'string' || !entry.trim()) continue;
+    const value = entry.trim();
+    if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://')) {
+      dataUrls.push(value);
+      continue;
+    }
+    const resolved = isAbsolute(value) ? value : join(process.cwd(), value);
+    if (!existsSync(resolved)) {
+      throw new Error(`Reference image not found: ${value} (resolved ${resolved})`);
+    }
+    const ext = resolved.toLowerCase().match(/\.(png|jpe?g|webp|gif)$/);
+    const mime = ext ? MIME_BY_EXTENSION[`.${ext[1]}`] : 'image/png';
+    const bytes = await readFileAsync(resolved);
+    const base64 = bytes.toString('base64');
+    dataUrls.push(`data:${mime};base64,${base64}`);
+  }
+  return dataUrls;
+}
+
 export async function generateGodTiboImage({
   prompt,
   model = GOD_TIBO_DEFAULT_MODEL,
   aspectRatio,
   providerMode = GOD_TIBO_PROVIDER_AUTO,
   dryRun = false,
+  referenceImages = [],
   deps = {},
 } = {}) {
   if (typeof prompt !== 'string' || prompt.trim() === '') {
@@ -83,6 +122,12 @@ export async function generateGodTiboImage({
   const enrichedPrompt = injectAspectRatioHint(prompt, aspectRatio);
   const config = resolveGodTiboConfig({ providerMode, resolveConfigImpl });
   const provider = createProviderImpl(config);
+
+  // Reference images are read into data URLs so the god-tibo provider can
+  // pass them as input_image blocks in the Codex /responses request.
+  // buildResponsesRequest already accepts an images: string[] array of
+  // data URLs / URLs — we just need to surface them here.
+  const images = await resolveReferenceImages(referenceImages);
 
   // god-tibo's provider.generateImage writes a PNG to outputPath as a side
   // effect. slides-grab centralizes asset path resolution in
@@ -99,6 +144,7 @@ export async function generateGodTiboImage({
       model,
       outputPath: tempPath,
       dryRun: Boolean(dryRun),
+      images: images.length > 0 ? images : undefined,
     });
 
     if (dryRun) {
@@ -132,4 +178,5 @@ export async function generateGodTiboImage({
 export const __test_only__ = {
   ASPECT_RATIO_HINTS,
   isCodexAuthError,
+  resolveReferenceImages,
 };

@@ -313,6 +313,7 @@ program
   .option('--image-size <size>', 'Nano Banana image size preset: 2K or 4K (default: 4K)')
   .option('--base-url <url>', 'Codex/OpenAI-compatible base URL (default: OPENAI_IMAGE_BASE_URL, OPENAI_BASE_URL, then OpenAI)')
   .option('--api-key-env <name>', 'Env var to read for Codex/OpenAI-compatible provider API key')
+  .option('--reference <path>', 'Reference image path(s) for style-guided generation (god-tibo only, repeatable)', collectRepeatedOption, [])
   .addHelpText('after', [
     '',
     'Auth:',
@@ -334,6 +335,9 @@ program
     if (options.imageSize) args.push('--image-size', String(options.imageSize));
     if (options.baseUrl) args.push('--base-url', String(options.baseUrl));
     if (options.apiKeyEnv) args.push('--api-key-env', String(options.apiKeyEnv));
+    for (const ref of options.reference || []) {
+      args.push('--reference', String(ref));
+    }
     await runCommand('scripts/generate-image.js', args);
   });
 
