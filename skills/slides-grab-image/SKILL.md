@@ -36,17 +36,20 @@ Key prompt principles:
 
 ## Workflow
 
-### Stage 1 — Plan
-Use the installed **slides-grab-plan** skill.
+### Stage 1 — Plan (template-driven dense outline)
+Use the installed **slides-grab-plan** skill with image-native outline density rules.
 1. Take topic, audience, and tone.
 2. If the user provides a reference template/PDF/PPTX, import it with `slides-grab import-template --input <path>`. Also render the template pages to PNG (e.g. `pdftoppm -png -r 150 <input>.pdf <prefix>`) and store under `<slides-dir>/.slides-grab/template-previews/`. These page renders are the `--reference` images for Stage 2.
-3. Record `mode: image-native` and `style: template-pack` in `slide-outline.md`.
-4. Present outline, revise until approved.
+3. **Read the template pages in order** (page-01, page-02, ...). For each page, identify its layout type and information density — how many text blocks, data points, bullets, captions, and visual elements it carries. This is the critical step: the outline must match the template's per-slide density, not write a thin HTML-style summary.
+4. **Write a dense outline**: one outline slide per template page, carrying the full content the user wants — titles, subtitles, body paragraphs, full bullet lists, stat values, table data, captions, and image placement notes — at the volume the template page demonstrates. Image-native slides are single rasters with no HTML structure limits, so they hold more text and data per slide than semantic HTML. Do not under-fill.
+5. Tag each outline slide with `template-page: NN` so Stage 2 knows which reference image to pass.
+6. Record `mode: image-native` and `style: template-pack` in `slide-outline.md` meta.
+7. Present outline, revise until approved.
 
 ### Stage 2 — Design (per-slide image generation)
-1. Read approved `slide-outline.md`. For each slide, identify its type (cover, content, stat, closing) and pick 1–2 matching template page renders from `.slides-grab/template-previews/`.
+1. Read approved `slide-outline.md`. For each slide, read its `template-page: NN` tag and pick that exact template page render from `.slides-grab/template-previews/page-NN.png` as the primary `--reference`. If the slide has no tag, pick 1–2 layout-similar pages by slide type (cover, content, stat, closing).
 2. For each slide, run `slides-grab image` with:
-   - `--prompt` following the prompt structure above (content to inject + "follow the reference layout")
+   - `--prompt` containing ALL the content from the outline for that slide — the full title, subtitle, body paragraphs, every bullet, every stat value, every caption — not a summary. Precede the content with "Follow the reference image layout exactly — same color bands, same typography hierarchy, same spacing and density. Only replace the text content with the content below."
    - `--reference` pointing to the matching template page render(s)
    - `--reference` for any real photos to embed (member photos, product shots, logos)
    - `--slides-dir <path>` and `--name slide-XX` (so the output is `assets/slide-XX.png`)

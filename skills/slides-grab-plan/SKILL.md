@@ -41,6 +41,14 @@ Produce an approved `slide-outline.md` before any slide HTML generation.
    - imported template pack → `style: template-pack` and keep `<slides-dir>/.slides-grab/template-pack.json` with its `.slides-grab/template-previews/` assets
    - free-form custom direction → leave a one-paragraph `style:` block describing it
    - for chart slides, name the intended chart type and data payload in the slide notes so Stage 2 can build a real Chart.js canvas instead of placeholder bars or decorative pseudo-charts
+   - delivery mode → `mode: html` for semantic slide HTML, or `mode: image-native` for raster wrapper slides generated from the approved template/style; prefer `image-native` for existing corporate templates/forms when the user asks for visual matching rather than editable HTML
+4b. **Image-native outline density (mandatory when mode: image-native and a template is provided):** When the user provides a reference template (PDF/PPTX) for image-native generation, do NOT write a thin HTML-style outline. Instead:
+   - Render the template pages to PNG and open them in order (page-01, page-02, ...).
+   - For each template page, identify its layout type (cover, section divider, content grid, stat tiles, table, timeline, closing) and measure its **information density** — how many distinct text blocks, data points, bullets, captions, and visual elements it carries.
+   - Write one outline slide per template page (or per logical template section), matching that page's layout type and information volume. If template page 3 has a 2×3 stat grid with 6 data points and 3 captions, the corresponding outline slide must also list 6 data points and 3 captions — not just a one-line summary.
+   - Image-native slides are single raster images with no HTML structure constraints, so they can hold **more text and data per slide** than semantic HTML. Pack the outline with the full content the user wants on each slide — titles, subtitles, body paragraphs, bullet lists, data tables, stat values, captions, and image placement notes — at the density the template page demonstrates.
+   - Tag each outline slide with its matching template page number (e.g. `template-page: 03`) so Stage 2 knows which `--reference` image to pass.
+   - The result should be a noticeably denser outline than HTML mode: more bullets, more data, more text per slide, matching what the template's filled pages actually carry.
 5. Present a concise summary to user.
 6. Repeat revisions until explicit approval.
 
