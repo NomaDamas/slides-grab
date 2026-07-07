@@ -15,7 +15,6 @@ test('English and Korean READMEs document template-following and image-native wo
 
   for (const text of [readme, koreanReadme]) {
     assert.match(text, /slides-grab\s+import-template/);
-    assert.match(text, /slides-grab\s+generate-images/);
     assert.match(text, /template-pack\.json/);
     assert.match(text, /OPENAI_IMAGE_BASE_URL|OPENAI_BASE_URL/);
     assert.match(text, /--api-key-env/);
@@ -36,11 +35,9 @@ test('skill references describe imported template packs and image-native editor 
 
   assert.match(planSkill, /filled representative/i);
   assert.match(planSkill, /empty master/i);
-  assert.match(designSkill, /slides-grab\s+generate-images/);
   assert.match(designSkill, /Image Regenerate/);
   assert.match(designSkill, /raster/i);
   assert.match(workflowReference, /import-template/);
-  assert.match(workflowReference, /generate-images/);
   assert.match(workflowReference, /Image Regenerate/);
 });
 

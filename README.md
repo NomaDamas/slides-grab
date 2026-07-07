@@ -128,13 +128,13 @@ slides-grab import-template \
 
 The import writes `<slides-dir>/.slides-grab/template-pack.json` plus preview assets. In Stage 1, record `style: template-pack` in `slide-outline.md`; in Stage 2, generate HTML slides that follow the template pack roles, bbox/schema limits, colors, fonts, and previewed layout families. Run `slides-grab validate --slides-dir <path>` and `slides-grab design-gate` before export.
 
-For image-first decks, use `slides-grab generate-images` with a deterministic `--provider dry-run` in tests or real providers in production:
+For image-first decks, image-native slides are generated per slide with `slides-grab image --reference <template-page.png> --slides-dir <path>`: each generated PNG is wrapped in a `slide-XX.html` that displays `./assets/<name>.png`. Use a deterministic `--provider dry-run` in tests or real providers in production, and reuse the imported `template-pack.json` page previews as `--reference` inputs for style/layout guidance:
 
 ```bash
-slides-grab generate-images \
-  --outline slide-outline.md \
+slides-grab image \
+  --prompt "<whole-slide prompt>" \
   --slides-dir decks/acme-image \
-  --template-pack decks/acme-qbr/.slides-grab/template-pack.json \
+  --reference decks/acme-qbr/.slides-grab/template-pack.json \
   --provider dry-run
 ```
 

@@ -342,30 +342,6 @@ program
   });
 
 program
-  .command('generate-images')
-  .description('Generate image-native wrapper slides from an outline and optional template pack context')
-  .option('--outline <path>', 'Markdown slide outline to convert')
-  .option('--slides-dir <path>', 'Slide directory', 'slides')
-  .option('--template-pack <path>', 'Optional template-pack.json path')
-  .option('--provider <name>', 'Image provider: dry-run (default), god-tibo, codex, or nano-banana', 'dry-run')
-  .option('--model <id>', 'Optional provider model override')
-  .option('--base-url <url>', 'Codex/OpenAI-compatible base URL for provider=codex')
-  .addHelpText('after', [
-    '',
-    'Dry-run mode writes deterministic placeholder assets, wrapper HTML, prompts, and regeneration metadata without external API calls.',
-  ].join('\n'))
-  .action(async (options = {}) => {
-    const args = [];
-    if (options.outline) args.push('--outline', String(options.outline));
-    if (options.slidesDir) args.push('--slides-dir', String(options.slidesDir));
-    if (options.templatePack) args.push('--template-pack', String(options.templatePack));
-    if (options.provider) args.push('--provider', String(options.provider));
-    if (options.model) args.push('--model', String(options.model));
-    if (options.baseUrl) args.push('--base-url', String(options.baseUrl));
-    await runCommand('scripts/generate-images.js', args);
-  });
-
-program
   .command('edit')
   .description('Start interactive slide editor with Codex image-based edit flow')
   .option('--port <number>', 'Server port')

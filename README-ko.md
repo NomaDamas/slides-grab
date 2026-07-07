@@ -118,13 +118,13 @@ slides-grab import-template \
 
 이 명령은 `<slides-dir>/.slides-grab/template-pack.json`과 미리보기 에셋을 씁니다. Stage 1에서는 `slide-outline.md`에 `style: template-pack`을 기록하고, Stage 2에서는 template pack의 역할, bbox/스키마 제한, 색상, 폰트, 미리보기 레이아웃 계열을 따라 HTML 슬라이드를 생성하세요. 내보내기 전에는 `slides-grab validate --slides-dir <path>`와 `slides-grab design-gate`를 실행합니다.
 
-이미지 중심 덱은 테스트에서 결정적인 `--provider dry-run`을 쓰거나 운영에서 실제 provider를 지정해 `slides-grab generate-images`로 만들 수 있습니다.
+이미지 중심 덱은 슬라이드별로 `slides-grab image --reference <template-page.png> --slides-dir <path>`로 이미지 네이티브 슬라이드를 생성합니다. 각 PNG는 `./assets/<name>.png`를 표시하는 `slide-XX.html`로 감싸세요. 테스트에서는 결정적인 `--provider dry-run`을 쓰거나 운영에서 실제 provider를 지정하고, 가져온 `template-pack.json` 페이지 미리보기를 `--reference` 입력으로 재사용해 스타일/레이아웃 가이드로 활용하세요:
 
 ```bash
-slides-grab generate-images \
-  --outline slide-outline.md \
+slides-grab image \
+  --prompt "<whole-slide prompt>" \
   --slides-dir decks/acme-image \
-  --template-pack decks/acme-qbr/.slides-grab/template-pack.json \
+  --reference decks/acme-qbr/.slides-grab/template-pack.json \
   --provider dry-run
 ```
 

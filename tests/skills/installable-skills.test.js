@@ -117,16 +117,6 @@ test('packed npm install exposes the packaged image CLI command', () => {
     assert.match(helpOutput, /--base-url <url>/);
     assert.match(helpOutput, /--api-key-env <name>/);
     assert.doesNotMatch(helpOutput, /Cannot find module/);
-    const generateImagesHelpOutput = execFileSync(cliPath, ['generate-images', '--help'], {
-      cwd: installRoot,
-      encoding: 'utf-8',
-    });
-    assert.match(generateImagesHelpOutput, /slides-grab generate-images/);
-    assert.match(generateImagesHelpOutput, /--outline <path>/);
-    assert.match(generateImagesHelpOutput, /--template-pack <path>/);
-    assert.match(generateImagesHelpOutput, /dry-run/);
-    assert.doesNotMatch(generateImagesHelpOutput, /Cannot find module/);
-
     const gateHelpOutput = execFileSync(cliPath, ['design-gate', '--help'], {
       cwd: installRoot,
       encoding: 'utf-8',

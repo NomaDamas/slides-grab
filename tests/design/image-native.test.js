@@ -155,17 +155,17 @@ test('generateImageNativeSlides uses an injected provider and records provider m
   }
 });
 
-test('generate-images CLI dry-run creates validation-compatible image wrapper slides', async () => {
+test('generate-images script dry-run creates validation-compatible image wrapper slides', async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'image-native-cli-'));
   const outlinePath = path.join(workspace, 'slide-outline.md');
   const slidesDir = path.join(workspace, 'slides');
   const cliPath = path.join(process.cwd(), 'bin', 'ppt-agent.js');
+  const scriptPath = path.join(process.cwd(), 'scripts', 'generate-images.js');
 
   try {
     await writeFile(outlinePath, outlineMarkdown, 'utf8');
     const generated = spawnSync(process.execPath, [
-      cliPath,
-      'generate-images',
+      scriptPath,
       '--outline', outlinePath,
       '--slides-dir', slidesDir,
       '--provider', 'dry-run',
