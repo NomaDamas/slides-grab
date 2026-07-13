@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
-import { join, dirname } from 'node:path';
+import { basename, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
@@ -20,10 +20,20 @@ const FAKE_CODEX_BIN = join(REPO_ROOT, 'tests', 'editor', 'fixtures', 'fake-code
 const FAKE_CLAUDE_BIN = join(REPO_ROOT, 'tests', 'editor', 'fixtures', 'fake-claude.cjs');
 
 const SLIDE_HTML = '<!doctype html><html><body><div class="frame"><h1>Original Title</h1><p>Body</p></div></body></html>';
+const SENTINEL_HTML = '<!doctype html><html><body><h1>Unrelated Sentinel</h1></body></html>';
 
 const APPLY_FETCH_TIMEOUT_MS = 8_000;
 const EDIT_SUBPROCESS_TIMEOUT_MS = 4_000;
 const SERVER_READY_TIMEOUT_MS = 15_000;
+
+const EXPECTED_EDITOR_MODELS = [
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
+  'claude-opus-4-8',
+  'claude-sonnet-4-6',
+];
+const EXPECTED_CLAUDE_MODELS = new Set(['claude-opus-4-8', 'claude-sonnet-4-6']);
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -32,9 +42,13 @@ function sleep(ms) {
 async function createWorkspace() {
   const workspace = await mkdtemp(join(os.tmpdir(), 'editor-model-dispatch-'));
   const slidesDir = join(workspace, 'slides');
+  const unrelatedDir = join(workspace, 'unrelated');
   await mkdir(slidesDir, { recursive: true });
+  await mkdir(unrelatedDir, { recursive: true });
   await writeFile(join(slidesDir, 'slide-01.html'), SLIDE_HTML, 'utf8');
-  return { workspace, slidesDir };
+  const sentinelPath = join(unrelatedDir, 'slide-99.html');
+  await writeFile(sentinelPath, SENTINEL_HTML, 'utf8');
+  return { workspace, slidesDir, sentinelPath };
 }
 
 function spawnEditorServer(workspace, port, { env = {} } = {}) {
@@ -96,6 +110,21 @@ async function stopChild(child) {
   });
 }
 
+async function runFakeCli(binPath, args, cwd) {
+  const child = spawn(process.execPath, [binPath, ...args], {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  child.stdout.on('data', (chunk) => { output += chunk.toString(); });
+  child.stderr.on('data', (chunk) => { output += chunk.toString(); });
+  const code = await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', resolve);
+  });
+  return { code, output };
+}
+
 async function postApplyWithTimeout(port, model, timeoutMs = APPLY_FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
   const hardTimer = setTimeout(() => controller.abort(), timeoutMs);
@@ -129,7 +158,7 @@ async function postApplyWithTimeout(port, model, timeoutMs = APPLY_FETCH_TIMEOUT
 }
 
 function expectedEngineFor(model) {
-  return isClaudeModel(model) ? 'claude' : 'codex';
+  return EXPECTED_CLAUDE_MODELS.has(model) ? 'claude' : 'codex';
 }
 
 test('every model in ALL_MODELS is recognized either as Codex or Claude', () => {
@@ -157,6 +186,11 @@ test('DEFAULT_CODEX_MODEL is the first entry of CODEX_MODELS', () => {
     CODEX_MODELS[0],
     'DEFAULT_CODEX_MODEL must be CODEX_MODELS[0] so /api/models defaultModel stays in sync',
   );
+});
+
+test('editor model registry exposes the GPT-5.6 family in canonical order and removes gpt-5.5 (issue #122)', () => {
+  assert.deepEqual(ALL_MODELS, EXPECTED_EDITOR_MODELS);
+  assert.equal(DEFAULT_CODEX_MODEL, 'gpt-5.6-sol');
 });
 
 test('isClaudeModel correctly classifies every registered model', () => {
@@ -209,12 +243,43 @@ test('editor.html bundles a fallback <option> for every registered model', async
   }
 });
 
+test('editor.html fallback model options match the canonical issue #122 order exactly', async () => {
+  const html = await readFile(join(REPO_ROOT, 'src', 'editor', 'editor.html'), 'utf8');
+  const selectMatch = html.match(/<select\b[^>]*id=["']model-select["'][\s\S]*?<\/select>/i);
+  assert.ok(selectMatch, 'editor.html must contain a <select id="model-select"> element');
+  const optionValues = [...selectMatch[0].matchAll(/<option\b[^>]*value=["']([^"']+)["']/gi)]
+    .map((match) => match[1]);
+
+  assert.deepEqual(optionValues, EXPECTED_EDITOR_MODELS);
+});
+
+test('fake editor CLIs reject prompt paths that escape their workspace', async () => {
+  const workspace = await mkdtemp(join(os.tmpdir(), 'editor-fake-cli-root-'));
+  const outsideDir = await mkdtemp(join(os.tmpdir(), 'editor-fake-cli-outside-'));
+  const outsideSlide = join(outsideDir, 'slide-evil.html');
+  const outsideHtml = '<!doctype html><html><body><h1>Outside</h1></body></html>';
+  await writeFile(outsideSlide, outsideHtml, 'utf8');
+  const relativeOutside = join('..', basename(outsideDir), 'slide-evil.html');
+  const prompt = `Edit ${relativeOutside} only.`;
+
+  try {
+    const codex = await runFakeCli(FAKE_CODEX_BIN, ['--model', 'gpt-5.6-sol', prompt], workspace);
+    const claude = await runFakeCli(FAKE_CLAUDE_BIN, ['-p', '--model', 'claude-opus-4-8', prompt], workspace);
+    assert.equal(codex.code, 2, codex.output);
+    assert.equal(claude.code, 2, claude.output);
+    assert.equal(await readFile(outsideSlide, 'utf8'), outsideHtml);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+    await rm(outsideDir, { recursive: true, force: true });
+  }
+});
+
 for (const model of ALL_MODELS) {
   const expectedEngine = expectedEngineFor(model);
   const expectedMarker = `[EDITED-BY-${model}]`;
 
   test(`/api/apply with ${model} dispatches to ${expectedEngine} CLI and actually edits the slide (no hang, no silent failure)`, async () => {
-    const { workspace, slidesDir } = await createWorkspace();
+    const { workspace, slidesDir, sentinelPath } = await createWorkspace();
     const port = await getAvailablePort();
     const server = spawnEditorServer(workspace, port);
 
@@ -261,14 +326,10 @@ for (const model of ALL_MODELS) {
           `Marker missing means /api/apply reported success but the CLI never actually edited the slide — a silent dispatch failure. ` +
           `Slide content tail:\n${slideAfter.slice(-400)}`,
       );
-
-      const wrongEngineMarkerPattern = new RegExp(
-        `\\[EDITED-BY-(?:${(expectedEngine === 'codex' ? CLAUDE_MODELS : CODEX_MODELS).join('|').replace(/\./g, '\\.')})\\]`,
-      );
-      assert.ok(
-        !wrongEngineMarkerPattern.test(slideAfter),
-        `model ${model}: slide must NOT contain a marker from the wrong engine class. Routing regression detected. ` +
-          `Slide content tail:\n${slideAfter.slice(-400)}`,
+      assert.equal(
+        await readFile(sentinelPath, 'utf8'),
+        SENTINEL_HTML,
+        `model ${model}: fake CLI must not edit unrelated slide files outside the requested slide path`,
       );
 
       const logRes = await fetch(`http://localhost:${port}/api/runs/${result.body.runId}/log`);

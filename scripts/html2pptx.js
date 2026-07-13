@@ -10,6 +10,7 @@ import { ensureOutputDirectory, SLIDE_FILE_PATTERN, sortFigmaSlideFiles } from '
 
 const require = createRequire(import.meta.url);
 const html2pptx = require('../src/html2pptx.cjs');
+const { launchBrowser } = html2pptx;
 const { DEFAULT_SLIDE_MODE, getSlideModeChoices, getSlideModeConfig, normalizeSlideMode } = require('../src/slide-mode.cjs');
 
 const DEFAULT_SLIDES_DIR = 'slides';
@@ -141,8 +142,13 @@ async function main() {
   });
   pres.layout = 'SLIDES_GRAB_HTML2PPTX';
 
-  for (const file of files) {
-    await html2pptx(resolve(slidesDir, file), pres);
+  const browser = await launchBrowser(process.env.TMPDIR || '/tmp');
+  try {
+    for (const file of files) {
+      await html2pptx(resolve(slidesDir, file), pres, { browser, fitToLayout: true });
+    }
+  } finally {
+    await browser.close();
   }
 
   await ensureOutputDirectory(outputFile);

@@ -8,6 +8,8 @@ import { spawn } from 'node:child_process';
 import { getAvailablePort } from './test-server-helpers.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const FAKE_CODEX_BIN = join(REPO_ROOT, 'tests', 'editor', 'fixtures', 'fake-codex.cjs');
+const FAKE_CLAUDE_BIN = join(REPO_ROOT, 'tests', 'editor', 'fixtures', 'fake-claude.cjs');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,6 +50,8 @@ function spawnEditorServer(workspace, port, { args = [], env = {} } = {}) {
       env: {
         ...process.env,
         PPT_AGENT_PACKAGE_ROOT: REPO_ROOT,
+        PPT_AGENT_CODEX_BIN: FAKE_CODEX_BIN,
+        PPT_AGENT_CLAUDE_BIN: FAKE_CLAUDE_BIN,
         ...env,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -141,7 +145,7 @@ test('refuses to open a second editor when another slides-grab editor already ow
   }
 });
 
-test('/api/models exposes claude-opus-4-8 so the bbox editor can route edits to Opus 4.8 (issue #88)', async () => {
+test('/api/models exposes the GPT-5.6 family with Sol as default and removes gpt-5.5 (issue #122)', async () => {
   const workspace = await createWorkspace();
   const port = await getAvailablePort();
   const server = spawnEditorServer(workspace, port);
@@ -153,32 +157,47 @@ test('/api/models exposes claude-opus-4-8 so the bbox editor can route edits to 
     assert.equal(res.status, 200);
     const body = await res.json();
 
-    assert.ok(Array.isArray(body.models), '/api/models must return a models array');
-    assert.ok(
-      body.models.includes('claude-opus-4-8'),
-      `/api/models should include 'claude-opus-4-8' after the Opus 4.8 upgrade. Got: ${JSON.stringify(body.models)}`,
-    );
-    assert.ok(
-      !body.models.includes('claude-opus-4-7'),
-      `/api/models should no longer include 'claude-opus-4-7'. Got: ${JSON.stringify(body.models)}`,
-    );
-    assert.ok(
-      body.models.includes('claude-sonnet-4-6'),
-      `/api/models should still include 'claude-sonnet-4-6' (no Sonnet 4.7 exists). Got: ${JSON.stringify(body.models)}`,
-    );
-    assert.equal(
-      body.defaultModel,
-      'gpt-5.5',
-      '/api/models should advertise gpt-5.5 as the default model so fresh editor sessions open on the latest Codex target',
-    );
-    assert.ok(
-      body.models.includes('gpt-5.5'),
-      `/api/models should include 'gpt-5.5'. Got: ${JSON.stringify(body.models)}`,
-    );
-    assert.ok(
-      body.models.includes('gpt-5.4'),
-      `/api/models should include 'gpt-5.4' (re-enabled per user request after the gpt-5.5 default rollout). Got: ${JSON.stringify(body.models)}`,
-    );
+    assert.deepEqual(body.models, [
+      'gpt-5.6-sol',
+      'gpt-5.6-terra',
+      'gpt-5.6-luna',
+      'claude-opus-4-8',
+      'claude-sonnet-4-6',
+    ]);
+    assert.equal(body.defaultModel, 'gpt-5.6-sol');
+  } finally {
+    await stopChild(server.child);
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test('/api/apply rejects removed GPT-5.5, GPT-5.4, and GPT-5.3 identifiers', async () => {
+  const workspace = await createWorkspace();
+  const port = await getAvailablePort();
+  const server = spawnEditorServer(workspace, port);
+
+  try {
+    await waitForServerReady(port, server.child, server.output);
+    for (const model of ['gpt-5.5', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.3-codex-spark']) {
+      const applyRes = await fetch(`http://localhost:${port}/api/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slide: 'slide-01.html',
+          prompt: 'Reject the removed model.',
+          model,
+          selections: [{ x: 40, y: 60, width: 320, height: 180, targets: [] }],
+        }),
+      });
+
+      const body = await applyRes.json();
+      assert.equal(applyRes.status, 400, `model=${model} body=${JSON.stringify(body)}`);
+      assert.match(body.error || '', /Invalid `model`/);
+      assert.match(body.error || '', /gpt-5\.6-sol/);
+      assert.match(body.error || '', /gpt-5\.6-terra/);
+      assert.match(body.error || '', /gpt-5\.6-luna/);
+      assert.doesNotMatch(body.error || '', /gpt-5\.(?:5|4|3)/);
+    }
   } finally {
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });

@@ -82,6 +82,7 @@ slides-grab build-viewer      # 단일 viewer.html 생성
 slides-grab validate          # Playwright 기반 슬라이드 HTML 검증
 slides-grab convert           # 실험적/불안정한 PPTX로 내보내기
 slides-grab convert --resolution 2160p  # 고해상도 래스터 PPTX 내보내기
+slides-grab convert --engine text  # 편집 가능한 텍스트를 DOM 기반으로 내보내기
 slides-grab figma             # Figma Slides 가져오기용 실험적/불안정한 PPTX 생성
 slides-grab pdf               # 캡처 모드 PDF 내보내기(기본값)
 slides-grab pdf --resolution 2160p  # 고해상도 이미지 기반 PDF 내보내기
@@ -170,6 +171,8 @@ slides-grab image --slides-dir decks/my-deck --prompt "Editorial hero image of a
 
 `slides-grab pdf`와 `slides-grab convert`는 더 선명한 결과물을 위해 기본적으로 `2160p` / `4k` 래스터 출력을 사용합니다. 더 작거나 빠른 산출물이 필요하면 `--resolution <preset>`으로 `720p`, `1080p`, `1440p`, `2160p`, `4k` 중 하나를 지정할 수 있습니다.
 
+`slides-grab convert`는 시각적 충실도가 가장 안정적인 `--engine raster`를 기본값으로 사용합니다. PowerPoint에서 편집 가능한 텍스트가 더 중요하면 `--engine text`를 사용할 수 있습니다. text 엔진은 실험적이며 시맨틱 텍스트 태그가 필요하고, 지원하지 않는 HTML/CSS를 거부할 수 있으며, canvas/SVG 시각 요소는 래스터 이미지로 변환합니다. `--resolution`은 raster 엔진에서만 사용할 수 있습니다. 두 엔진은 presentation 또는 card-news 모드에서 동일한 PowerPoint 슬라이드 크기를 사용합니다.
+
 ### 웹 동영상을 덱 에셋으로 다운로드
 
 원본 동영상이 YouTube 또는 `yt-dlp`가 지원하는 다른 페이지에 있다면 먼저 덱의 assets 폴더로 다운로드하세요.
@@ -194,6 +197,7 @@ slides-grab pdf        --slides-dir decks/my-deck --output decks/my-deck.pdf
 slides-grab pdf        --slides-dir decks/my-deck --mode print --output decks/my-deck-searchable.pdf
 slides-grab png        --slides-dir decks/my-deck --output-dir decks/my-deck/out-png
 slides-grab convert    --slides-dir decks/my-deck --output decks/my-deck.pptx
+slides-grab convert    --slides-dir decks/my-deck --output decks/my-deck-editable.pptx --engine text
 slides-grab figma      --slides-dir decks/my-deck --output decks/my-deck-figma.pptx
 ```
 

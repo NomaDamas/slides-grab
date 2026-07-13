@@ -488,7 +488,34 @@
       display: none;
       border-radius: 6px;
       pointer-events: none;
+      box-sizing: border-box;
     }
+
+    .object-outline.selected {
+      pointer-events: auto;
+      z-index: 1;
+      cursor: move;
+    }
+
+    .object-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #60a5fa;
+      border: 1px solid rgba(226, 238, 255, 0.85);
+      border-radius: 50%;
+      z-index: 2;
+      pointer-events: auto;
+    }
+
+    .object-handle[data-object-handle="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
+    .object-handle[data-object-handle="n"] { left: 50%; top: -5px; transform: translateX(-50%); cursor: ns-resize; }
+    .object-handle[data-object-handle="ne"] { right: -5px; top: -5px; cursor: nesw-resize; }
+    .object-handle[data-object-handle="w"] { left: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+    .object-handle[data-object-handle="e"] { right: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+    .object-handle[data-object-handle="sw"] { left: -5px; bottom: -5px; cursor: nesw-resize; }
+    .object-handle[data-object-handle="s"] { left: 50%; bottom: -5px; transform: translateX(-50%); cursor: ns-resize; }
+    .object-handle[data-object-handle="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
 
     .object-outline.hover {
       border: 1.5px dashed rgba(96, 165, 250, 0.72);
@@ -1596,7 +1623,16 @@
             <div class="bbox-layer" id="bbox-layer"></div>
             <div class="object-layer" id="object-layer">
               <div class="object-outline hover" id="object-hover-box"></div>
-              <div class="object-outline selected" id="object-selected-box"></div>
+              <div class="object-outline selected" id="object-selected-box">
+                <span class="object-handle" data-object-handle="nw" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="n" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="ne" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="w" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="e" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="sw" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="s" aria-hidden="true"></span>
+                <span class="object-handle" data-object-handle="se" aria-hidden="true"></span>
+              </div>
             </div>
             <div class="draw-layer" id="draw-layer">
               <div class="draw-box" id="draw-box"></div>
@@ -1646,10 +1682,9 @@
             <div class="sidebar-section">
               <span class="sidebar-label">Model</span>
               <select id="model-select" class="model-select">
-                <option value="gpt-5.5">gpt-5.5</option>
-                <option value="gpt-5.4">gpt-5.4</option>
-                <option value="gpt-5.3-codex">gpt-5.3-codex</option>
-                <option value="gpt-5.3-codex-spark">gpt-5.3-codex-spark</option>
+                <option value="gpt-5.6-sol">gpt-5.6-sol</option>
+                <option value="gpt-5.6-terra">gpt-5.6-terra</option>
+                <option value="gpt-5.6-luna">gpt-5.6-luna</option>
                 <option value="claude-opus-4-8">claude-opus-4-8</option>
                 <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
               </select>

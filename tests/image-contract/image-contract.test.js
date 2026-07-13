@@ -213,7 +213,8 @@ test('buildSlideRuntimeHtml injects base href and runtime diagnostics', () => {
     slideFile: 'slide-01.html',
   });
 
-  assert.match(html, /<base href="file:\/\/\/tmp\/deck\/">/);
+  assert.match(html, /<base data-slides-grab-runtime="base" href="file:\/\/\/tmp\/deck\/">/);
+  assert.match(html, /<script data-slides-grab-runtime="diagnostics">/);
   assert.match(html, /\[slides-grab:image\]/);
   assert.match(html, /missing local asset/);
 });
@@ -223,7 +224,7 @@ test('build-viewer injects slide runtime html for local assets', () => {
   const viewerHtml = buildViewerHtml(slides);
 
   assert.equal(slides.length, 1);
-  assert.match(slides[0].html, /<base href="\.\//);
+  assert.match(slides[0].html, /<base data-slides-grab-runtime="base" href="\.\//);
   assert.match(viewerHtml, /srcdoc="/);
   assert.match(viewerHtml, /\[slides-grab:image\]/);
 });

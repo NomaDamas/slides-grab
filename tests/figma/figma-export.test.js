@@ -165,11 +165,12 @@ test('npm pack includes packaged html2pptx runtime instead of relying on .claude
   const filePaths = packInfo.files.map((entry) => entry.path);
 
   assert.ok(filePaths.includes('src/html2pptx.cjs'));
+  assert.ok(filePaths.includes('src/html2pptx-scale.cjs'));
   assert.ok(filePaths.includes('scripts/html2pptx.js'));
   assert.ok(!filePaths.some((filePath) => filePath.startsWith('.claude/')));
 });
 
-test('packed npm install can execute slides-grab figma without missing runtime modules', () => {
+test('packed npm install can execute figma help and editable-text conversion', () => {
   const packRoot = mkdtempSync(join(tmpdir(), 'slides-grab-pack-root-'));
   const installRoot = mkdtempSync(join(tmpdir(), 'slides-grab-pack-install-'));
 
@@ -204,6 +205,41 @@ test('packed npm install can execute slides-grab figma without missing runtime m
     assert.match(helpOutput, /slides-grab figma/);
     assert.match(helpOutput, /Manual import:/);
     assert.doesNotMatch(helpOutput, /Cannot find module/);
+
+    const slidesDir = join(installRoot, 'slides');
+    const passAPath = join(installRoot, 'pass-a.md');
+    const passBPath = join(installRoot, 'pass-b.md');
+    const outputPath = join(installRoot, 'editable.pptx');
+    mkdirSync(slidesDir, { recursive: true });
+    writeFileSync(join(slidesDir, 'slide-01.html'), createTestSlideHtml(), 'utf-8');
+    writeFileSync(passAPath, createPassAReport(slidesDir), 'utf-8');
+    writeFileSync(passBPath, createPassBReport(slidesDir), 'utf-8');
+
+    execFileSync(
+      cliPath,
+      [
+        'design-gate',
+        '--slides-dir',
+        slidesDir,
+        '--verdict',
+        'proceed',
+        '--pass-a-report',
+        passAPath,
+        '--pass-b-report',
+        passBPath,
+        '--resolution',
+        '720p',
+      ],
+      { cwd: installRoot, encoding: 'utf-8' },
+    );
+    execFileSync(
+      cliPath,
+      ['convert', '--slides-dir', slidesDir, '--output', outputPath, '--engine', 'text'],
+      { cwd: installRoot, encoding: 'utf-8' },
+    );
+
+    const slideXml = extractZipEntry(readFileSync(outputPath), 'ppt/slides/slide1.xml').toString('utf-8');
+    assert.match(slideXml, /<a:t>Figma Export Proof<\/a:t>/);
   } finally {
     rmSync(packRoot, { recursive: true, force: true });
     rmSync(installRoot, { recursive: true, force: true });

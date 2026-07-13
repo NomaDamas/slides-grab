@@ -234,7 +234,7 @@ test('keeps bbox prompt draft and model state per slide session', { concurrency:
     await page.waitForTimeout(800);
 
     // slide-01
-    await page.selectOption('#model-select', 'gpt-5.5');
+    await page.selectOption('#model-select', 'gpt-5.6-terra');
     await page.fill('#prompt-input', 'slide-01 prompt');
 
     // slide-02
@@ -243,7 +243,7 @@ test('keeps bbox prompt draft and model state per slide session', { concurrency:
       const counter = document.querySelector('#slide-counter');
       return counter && /2\s*\/\s*2/.test(counter.textContent || '');
     });
-    await page.selectOption('#model-select', 'gpt-5.3-codex');
+    await page.selectOption('#model-select', 'gpt-5.6-terra');
     await page.fill('#prompt-input', 'slide-02 prompt');
 
     // back to slide-01
@@ -254,7 +254,7 @@ test('keeps bbox prompt draft and model state per slide session', { concurrency:
     });
 
     const restoredModel = await page.$eval('#model-select', (el) => el.value);
-    assert.equal(restoredModel, 'gpt-5.5');
+    assert.equal(restoredModel, 'gpt-5.6-terra');
     const restoredPrompt = await page.$eval('#prompt-input', (el) => el.value);
     assert.equal(restoredPrompt, 'slide-01 prompt');
 
@@ -265,12 +265,52 @@ test('keeps bbox prompt draft and model state per slide session', { concurrency:
     });
     const slide2Model = await page.$eval('#model-select', (el) => el.value);
     const slide2Prompt = await page.$eval('#prompt-input', (el) => el.value);
-    assert.equal(slide2Model, 'gpt-5.3-codex');
+    assert.equal(slide2Model, 'gpt-5.6-terra');
     assert.equal(slide2Prompt, 'slide-02 prompt');
+
   } finally {
     if (browser) {
       await browser.close().catch(() => {});
     }
+    server.kill('SIGTERM');
+    await sleep(400);
+    await rm(workspace, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
+test('recovers removed gpt-5.5 localStorage state to the GPT-5.6 Sol default', { concurrency: false }, async () => {
+  const workspace = await mkdtemp(join(os.tmpdir(), 'editor-ui-stale-model-e2e-'));
+  await writeSlides(workspace);
+  const port = await getAvailablePort();
+  const serverOutput = { value: '' };
+  const serverScriptPath = join(REPO_ROOT, 'scripts', 'editor-server.js');
+  const server = spawn(process.execPath, [serverScriptPath, '--port', String(port)], {
+    cwd: workspace,
+    env: { ...process.env, PPT_AGENT_PACKAGE_ROOT: REPO_ROOT },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  server.stdout.on('data', (chunk) => { serverOutput.value += chunk.toString(); });
+  server.stderr.on('data', (chunk) => { serverOutput.value += chunk.toString(); });
+
+  let browser;
+  try {
+    await waitForServerReady(port, server, serverOutput);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    const initialModels = page.waitForResponse((response) => response.url().endsWith('/api/models') && response.ok());
+    await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
+    await initialModels;
+
+    await page.evaluate(() => localStorage.setItem('slides-grab-editor-model', 'gpt-5.5'));
+    const reloadedModels = page.waitForResponse((response) => response.url().endsWith('/api/models') && response.ok());
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadedModels;
+    await page.waitForFunction(() => document.querySelector('#model-select')?.value === 'gpt-5.6-sol');
+
+    assert.equal(await page.locator('#model-select').inputValue(), 'gpt-5.6-sol');
+    assert.equal(await page.evaluate(() => localStorage.getItem('slides-grab-editor-model')), 'gpt-5.6-sol');
+  } finally {
+    if (browser) await browser.close().catch(() => {});
     server.kill('SIGTERM');
     await sleep(400);
     await rm(workspace, { recursive: true, force: true }).catch(() => {});

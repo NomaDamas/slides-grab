@@ -90,6 +90,7 @@ slides-grab build-viewer      # Build single-file viewer.html
 slides-grab validate          # Validate slide HTML (Playwright-based)
 slides-grab convert           # Export to experimental / unstable PPTX
 slides-grab convert --resolution 2160p  # Higher-resolution raster PPTX export
+slides-grab convert --engine text  # Export editable text with best-effort DOM extraction
 slides-grab figma             # Export an experimental / unstable Figma Slides importable PPTX
 slides-grab pdf               # Export PDF in capture mode (default)
 slides-grab pdf --resolution 2160p  # Higher-resolution image-backed PDF export
@@ -179,6 +180,8 @@ When a slide contains a `<video>`, PDF export now uses the video's poster/thumbn
 
 `slides-grab pdf` and `slides-grab convert` now default to `2160p` / `4k` raster output for sharper exports. You can still override with `--resolution <preset>` using `720p`, `1080p`, `1440p`, `2160p`, or `4k` when you want smaller or faster artifacts.
 
+`slides-grab convert` defaults to `--engine raster` for the most reliable visual fidelity. Use `--engine text` when editable PowerPoint text matters more than exact rendering. The text engine is experimental: it requires semantic text tags, may reject unsupported HTML/CSS, and rasterizes canvas/SVG visuals. `--resolution` can only be used with the raster engine. Both engines use the same presentation or card-news PowerPoint slide size.
+
 ### Downloading Web Videos into Deck Assets
 
 If a source video starts on YouTube or another page supported by `yt-dlp`, download it into the deck assets folder first:
@@ -203,6 +206,7 @@ slides-grab pdf        --slides-dir decks/my-deck --output decks/my-deck.pdf
 slides-grab pdf        --slides-dir decks/my-deck --mode print --output decks/my-deck-searchable.pdf
 slides-grab png        --slides-dir decks/my-deck --output-dir decks/my-deck/out-png
 slides-grab convert    --slides-dir decks/my-deck --output decks/my-deck.pptx
+slides-grab convert    --slides-dir decks/my-deck --output decks/my-deck-editable.pptx --engine text
 slides-grab figma      --slides-dir decks/my-deck --output decks/my-deck-figma.pptx
 ```
 

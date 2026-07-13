@@ -395,21 +395,6 @@ test('static editor fallback select exposes claude-opus-4-8 and not superseded c
   assert.doesNotMatch(html, /<option value="claude-opus-4-7">claude-opus-4-7<\/option>/);
 });
 
-test('DEFAULT_MODELS uses gpt-5.5 as the first entry per issue #73 (gpt-5.4 deprecation)', () => {
-  assert.equal(
-    DEFAULT_MODELS[0],
-    'gpt-5.5',
-    `DEFAULT_MODELS[0] must be 'gpt-5.5' per issue #73 after gpt-5.4 deprecation, so state.defaultModel opens fresh sessions on the supported model. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
-  );
-});
-
-test('DEFAULT_MODELS includes gpt-5.4 alongside gpt-5.5 so users keep access to both Codex targets', () => {
-  assert.ok(
-    DEFAULT_MODELS.includes('gpt-5.4'),
-    `DEFAULT_MODELS should include 'gpt-5.4' (re-enabled per user request — kept available alongside the new gpt-5.5 default). Got: ${JSON.stringify(DEFAULT_MODELS)}`,
-  );
-});
-
 test('DEFAULT_MODELS still exposes claude-sonnet-4-6 (there is no Sonnet 4.7 yet)', () => {
   assert.ok(
     DEFAULT_MODELS.includes('claude-sonnet-4-6'),

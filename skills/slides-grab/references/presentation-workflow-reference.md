@@ -43,7 +43,7 @@ Use the installed **slides-grab-design** skill.
 Use the installed **slides-grab-export** skill.
 
 1. Confirm user wants conversion.
-2. Export to PPTX: `slides-grab convert --slides-dir <path> --output <name>.pptx` (**experimental / unstable**)
+2. Export to PPTX: `slides-grab convert --slides-dir <path> --output <name>.pptx --engine raster` for visual fidelity (default), or `--engine text` for best-effort editable text (**experimental / unstable**)
 3. Export to PDF (if requested): `slides-grab pdf --slides-dir <path> --output <name>.pdf`
 4. Report results.
 

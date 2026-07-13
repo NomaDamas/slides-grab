@@ -30,7 +30,7 @@ test('loadSlides keeps srcdoc base relative to generated viewer', async () => {
 
     const [slide] = loadSlides(tempDir);
 
-    assert.match(slide.html, /<base href="\.\/">/);
+    assert.match(slide.html, /<base data-slides-grab-runtime="base" href="\.\/">/);
     assert.doesNotMatch(slide.html, /file:\/\//);
   } finally {
     await rm(tempDir, { recursive: true, force: true });

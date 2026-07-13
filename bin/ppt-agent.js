@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import {
   getFigmaImportCaveats,
   getFigmaManualImportInstructions,
@@ -187,12 +187,25 @@ program
   .option('--slides-dir <path>', 'Slide directory', 'slides')
   .option('--output <path>', 'Output PPTX file')
   .option('--mode <mode>', 'Slide mode: presentation or card-news', 'presentation')
-  .option('--resolution <preset>', 'Raster size preset: 720p, 1080p, 1440p, 2160p, or 4k (default: 2160p)')
+  .option('--resolution <preset>', 'Raster size preset: 720p, 1080p, 1440p, 2160p, or 4k (default: 2160p, raster engine only)')
+  .addOption(
+    new Option('--engine <engine>', 'Export engine: raster (default, highest visual fidelity) or text (editable text with best-effort DOM extraction)')
+      .choices(['raster', 'text'])
+      .default('raster'),
+  )
   .action(async (options = {}) => {
+    if (options.engine === 'text' && options.resolution) {
+      reportCliError(new Error('--resolution can only be used with --engine raster.'));
+      return;
+    }
     if (!(await ensureDesignGateForExport(options.slidesDir, 'PPTX export'))) return;
     const args = ['--slides-dir', options.slidesDir, '--mode', options.mode];
     if (options.output) {
       args.push('--output', String(options.output));
+    }
+    if (options.engine === 'text') {
+      await runCommand('scripts/html2pptx.js', args);
+      return;
     }
     if (options.resolution) {
       args.push('--resolution', String(options.resolution));

@@ -51,30 +51,18 @@ function detectStdinClosed() {
   });
 }
 
-function findSlideFiles(rootDir) {
-  const found = [];
-  const visit = (dir, depth) => {
-    if (depth > 4) return;
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
-        visit(full, depth + 1);
-        continue;
-      }
-      if (entry.isFile() && SLIDE_FILE_PATTERN.test(entry.name)) {
-        found.push(full);
-      }
-    }
-  };
-  visit(rootDir, 0);
-  return found.sort();
+function findRequestedSlide(rootDir, prompt) {
+  const match = prompt.match(/^Edit (.+) only\.$/m);
+  if (!match) return undefined;
+  const slidePath = path.resolve(rootDir, match[1]);
+  if (!SLIDE_FILE_PATTERN.test(path.basename(slidePath)) || !fs.existsSync(slidePath)) return undefined;
+  const stat = fs.lstatSync(slidePath);
+  if (!stat.isFile() || stat.isSymbolicLink()) return undefined;
+  const rootPath = fs.realpathSync(rootDir);
+  const realSlidePath = fs.realpathSync(slidePath);
+  const relativePath = path.relative(rootPath, realSlidePath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) return undefined;
+  return realSlidePath;
 }
 
 function applyMarkerEdit(slidePath, marker) {
@@ -106,19 +94,18 @@ async function main() {
 
   const model = parseFlag(argv, '--model') || 'unknown-model';
   const cwd = process.cwd();
-  const slideFiles = findSlideFiles(cwd);
+  const prompt = argv[argv.length - 1] || '';
+  const slidePath = findRequestedSlide(cwd, prompt);
 
-  if (slideFiles.length === 0) {
-    process.stderr.write(`[fake-claude] no slide-*.html files found under ${cwd}\n`);
+  if (!slidePath) {
+    process.stderr.write(`[fake-claude] requested slide path not found in prompt under ${cwd}\n`);
     process.exit(2);
   }
 
   const marker = `[EDITED-BY-${model.trim()}]`;
-  for (const slidePath of slideFiles) {
-    applyMarkerEdit(slidePath, marker);
-  }
+  applyMarkerEdit(slidePath, marker);
 
-  process.stdout.write(`[fake-claude] model=${model.trim()} edited=${slideFiles.length} marker=${marker}\n`);
+  process.stdout.write(`[fake-claude] model=${model.trim()} edited=1 marker=${marker}\n`);
   process.exit(0);
 }
 

@@ -3,7 +3,8 @@
 These are the packaged export rules for installable `slides-grab` skills.
 
 ## Package-first commands
-- PPTX export: `slides-grab convert --slides-dir <path> --output <name>.pptx`
+- Raster PPTX export (default, highest visual fidelity): `slides-grab convert --slides-dir <path> --output <name>.pptx --engine raster`
+- Editable-text PPTX export (best-effort DOM extraction): `slides-grab convert --slides-dir <path> --output <name>-editable.pptx --engine text`
 - PDF export: `slides-grab pdf --slides-dir <path> --output <name>.pdf`
 - Figma export: `slides-grab figma --slides-dir <path> --output <name>-figma.pptx`
 
@@ -17,6 +18,7 @@ These are the packaged export rules for installable `slides-grab` skills.
 
 ## User-facing caveats
 - PPTX export is experimental / unstable.
+- `--resolution` can only be used with raster PPTX export. Text export requires semantic text tags, rasterizes canvas/SVG visuals, and may reject unsupported HTML/CSS.
 - Figma export is experimental / unstable.
 - Best-effort output may still require manual cleanup after export.
 

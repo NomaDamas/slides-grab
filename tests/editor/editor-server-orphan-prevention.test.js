@@ -26,12 +26,10 @@ async function createWorkspace() {
 }
 
 async function writeHangingMockCli(workspace, fileName) {
-  const mockPath = join(workspace, fileName);
-  const pidLogPath = join(workspace, `${fileName}.pids`);
-  const script = `#!/usr/bin/env node
+const mockPath = join(workspace, fileName);
+const pidLogPath = join(workspace, `${fileName}.pids`);
+const script = `#!/usr/bin/env node
 const fs = require('node:fs');
-fs.appendFileSync(${JSON.stringify(pidLogPath)}, String(process.pid) + '\\n');
-process.stdout.write('hanging-mock-started pid=' + process.pid + '\\n');
 process.on('SIGTERM', () => {
   fs.appendFileSync(${JSON.stringify(pidLogPath)}, 'SIGTERM:' + process.pid + '\\n');
   process.exit(143);
@@ -40,6 +38,8 @@ process.on('SIGINT', () => {
   fs.appendFileSync(${JSON.stringify(pidLogPath)}, 'SIGINT:' + process.pid + '\\n');
   process.exit(130);
 });
+fs.appendFileSync(${JSON.stringify(pidLogPath)}, String(process.pid) + '\\n');
+process.stdout.write('hanging-mock-started pid=' + process.pid + '\\n');
 setTimeout(() => {
   fs.appendFileSync(${JSON.stringify(pidLogPath)}, 'TIMEOUT_EXIT:' + process.pid + '\\n');
   process.exit(0);
@@ -172,7 +172,7 @@ test('editor-server kills the spawned codex child when the /api/apply request is
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Hang this edit so we can abort it.',
-        model: 'gpt-5.5',
+        model: 'gpt-5.6-sol',
         selections: [
           {
             x: 40,
@@ -232,7 +232,7 @@ test('editor-server kills all in-flight codex children when the server itself is
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Hang during shutdown.',
-        model: 'gpt-5.5',
+        model: 'gpt-5.6-sol',
         selections: [
           {
             x: 40,
@@ -281,7 +281,7 @@ test('/api/runs/:runId/cancel kills the spawned child and reports cancelled=true
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Hang to be cancelled via API.',
-        model: 'gpt-5.5',
+        model: 'gpt-5.6-sol',
         selections: [
           {
             x: 40,

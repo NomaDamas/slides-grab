@@ -2,7 +2,7 @@
 
 import { state, TOOL_MODE_DRAW, TOOL_MODE_SELECT, SLIDE_W, SLIDE_H, NON_SELECTABLE_TAGS, DIRECT_TEXT_TAGS } from './editor-state.js';
 import {
-  slideIframe, slidePanel, drawBox, toolModeDrawBtn, toolModeSelectBtn,
+  slideIframe, slidePanel, objectLayer, drawBox, toolModeDrawBtn, toolModeSelectBtn,
   bboxToolbar, selectToolbar, editorHint, objectSelectedBox, objectHoverBox,
   selectedObjectMini, miniTag, miniText, selectEmptyHint,
   toggleBold, toggleItalic, toggleUnderline, toggleStrike,
@@ -16,8 +16,181 @@ import {
 } from './editor-utils.js';
 import { renderBboxes, scaleSlide, clientToSlidePoint, getXPath } from './editor-bbox.js';
 
+const MIN_OBJECT_SIZE = 16;
+const OBJECT_MOVE_EPSILON = 4;
+const SLIDE_BACKGROUND_AREA_RATIO = 0.85;
+const RESIZE_HANDLE_STYLES = new Set(['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se', 'move']);
+
+let objectTransform = null;
+let commitObjectTransform = () => {};
+let suppressNextObjectClick = false;
+
+export function setObjectTransformCommitHandler(callback) {
+  commitObjectTransform = typeof callback === 'function' ? callback : (() => {});
+}
+
+function isObjectTransformActive() {
+  return Boolean(objectTransform);
+}
+
+function resolveObjectTransformTarget() {
+  const selected = getSelectedObjectElement();
+  if (!selected) return null;
+
+  const rect = elementToSlideRect(selected);
+  return rect ? { element: selected, rect } : null;
+}
+
+function clampObjectGeometry(base, dx, dy, handle = 'move') {
+  const next = {
+    x: base.x,
+    y: base.y,
+    width: base.width,
+    height: base.height,
+  };
+
+  if (handle === 'move') {
+    next.x = base.x + dx;
+    next.y = base.y + dy;
+  } else {
+    if (handle.includes('w')) {
+      next.x = base.x + dx;
+      next.width = base.width - dx;
+    }
+    if (handle.includes('e')) {
+      next.width = base.width + dx;
+    }
+    if (handle.includes('n')) {
+      next.y = base.y + dy;
+      next.height = base.height - dy;
+    }
+    if (handle.includes('s')) {
+      next.height = base.height + dy;
+    }
+  }
+
+  next.x = clamp(Math.round(next.x), 0, SLIDE_W - MIN_OBJECT_SIZE);
+  next.y = Math.round(next.y);
+  next.y = clamp(next.y, 0, SLIDE_H - MIN_OBJECT_SIZE);
+
+  if (next.width < MIN_OBJECT_SIZE) {
+    next.width = MIN_OBJECT_SIZE;
+    if (handle.includes('w')) {
+      next.x = base.x + base.width - MIN_OBJECT_SIZE;
+    }
+  }
+
+  if (next.height < MIN_OBJECT_SIZE) {
+    next.height = MIN_OBJECT_SIZE;
+    if (handle.includes('n')) {
+      next.y = base.y + base.height - MIN_OBJECT_SIZE;
+    }
+  }
+
+  next.x = clamp(Math.round(next.x), 0, SLIDE_W - MIN_OBJECT_SIZE);
+  next.y = clamp(Math.round(next.y), 0, SLIDE_H - MIN_OBJECT_SIZE);
+  next.width = clamp(Math.round(next.width), MIN_OBJECT_SIZE, SLIDE_W - next.x);
+  next.height = clamp(Math.round(next.height), MIN_OBJECT_SIZE, SLIDE_H - next.y);
+
+  return next;
+}
+
+function getObjectHandleAnchor(rect, handleType) {
+  const hasWest = handleType.includes('w');
+  const hasEast = handleType.includes('e');
+  const hasNorth = handleType.includes('n');
+  const hasSouth = handleType.includes('s');
+
+  if (hasWest && !hasEast) {
+    return {
+      x: rect.x,
+      y: rect.y + (hasNorth ? 0 : hasSouth ? rect.height : rect.height / 2),
+    };
+  }
+
+  if (hasEast && !hasWest) {
+    return {
+      x: rect.x + rect.width,
+      y: rect.y + (hasNorth ? 0 : hasSouth ? rect.height : rect.height / 2),
+    };
+  }
+
+  if (hasNorth) {
+    return {
+      x: rect.x + rect.width / 2,
+      y: rect.y,
+    };
+  }
+
+  if (hasSouth) {
+    return {
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height,
+    };
+  }
+
+  return {
+    x: rect.x,
+    y: rect.y,
+  };
+}
+
+function getOffsetParentOrigin(element) {
+  const offsetParent = element.offsetParent;
+  if (!isElementNode(offsetParent)) {
+    return { x: 0, y: 0 };
+  }
+
+  const tag = offsetParent.tagName.toLowerCase();
+  const frameWindow = slideIframe.contentWindow;
+  const styles = frameWindow?.getComputedStyle ? frameWindow.getComputedStyle(offsetParent) : null;
+  if ((tag === 'body' || tag === 'html') && styles?.position === 'static') {
+    return { x: 0, y: 0 };
+  }
+
+  const rect = offsetParent.getBoundingClientRect();
+  return {
+    x: rect.left + parsePixelValue(styles?.borderLeftWidth, 0),
+    y: rect.top + parsePixelValue(styles?.borderTopWidth, 0),
+  };
+}
+
+function serializeObjectTransformDocument(doc) {
+  if (!doc?.documentElement) return '';
+  const doctype = doc.doctype ? `<!DOCTYPE ${doc.doctype.name}>` : '<!DOCTYPE html>';
+  return `${doctype}\n${doc.documentElement.outerHTML}`;
+}
+
+function applyObjectGeometryToElement(element, rect) {
+  element.style.position = element.style.position || 'absolute';
+  element.style.boxSizing = 'border-box';
+
+  const origin = getOffsetParentOrigin(element);
+  const localX = rect.x - origin.x;
+  const localY = rect.y - origin.y;
+
+  element.style.left = `${Math.round(localX)}px`;
+  element.style.top = `${Math.round(localY)}px`;
+  element.style.width = `${Math.round(rect.width)}px`;
+  element.style.height = `${Math.round(rect.height)}px`;
+  element.style.maxWidth = 'none';
+  element.style.maxHeight = 'none';
+}
+
 function isElementNode(node) {
   return Boolean(node) && node.nodeType === Node.ELEMENT_NODE;
+}
+
+function isSlideBackgroundElement(el) {
+  const rect = el.getBoundingClientRect();
+  const areaRatio = (rect.width * rect.height) / (SLIDE_W * SLIDE_H);
+  return areaRatio >= SLIDE_BACKGROUND_AREA_RATIO && el.children.length > 0;
+}
+
+export function consumeObjectTransformClickSuppression() {
+  if (!suppressNextObjectClick) return false;
+  suppressNextObjectClick = false;
+  return true;
 }
 
 export function resolveXPath(doc, xpath) {
@@ -65,7 +238,8 @@ export function getSelectableTargetAt(clientX, clientY) {
   while (node && !isSelectableElement(node)) {
     node = node.parentElement;
   }
-  return isElementNode(node) ? node : null;
+  if (!isElementNode(node)) return null;
+  return isSlideBackgroundElement(node) ? null : node;
 }
 
 export function elementToSlideRect(el) {
@@ -197,6 +371,120 @@ export function updateObjectEditorControls() {
   syncInlineInputs(snapshot);
 }
 
+function beginObjectTransform(event) {
+  if (!objectSelectedBox || state.toolMode !== TOOL_MODE_SELECT) return;
+  const button = event.button;
+  if (typeof button === 'number' && button !== 0) return;
+
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const handle = target.closest('[data-object-handle]');
+  const handleType = handle?.dataset?.objectHandle || 'move';
+  if (!RESIZE_HANDLE_STYLES.has(handleType)) return;
+
+  if (!objectSelectedBox.contains(target) && target !== objectSelectedBox) return;
+
+  const selected = resolveObjectTransformTarget();
+  if (!selected) return;
+
+  const start = clientToSlidePoint(event.clientX, event.clientY);
+  const anchor = getObjectHandleAnchor(selected.rect, handleType);
+  objectTransform = {
+    element: selected.element,
+    startRect: selected.rect,
+    nextRect: selected.rect,
+    startHtml: serializeObjectTransformDocument(slideIframe.contentDocument),
+    hasMoved: false,
+    pointerDownX: start.x,
+    pointerDownY: start.y,
+    handleType,
+    anchorX: anchor.x,
+    anchorY: anchor.y,
+    pointerOffsetX: start.x - anchor.x,
+    pointerOffsetY: start.y - anchor.y,
+  };
+
+  event.preventDefault();
+  event.stopPropagation();
+  objectSelectedBox.style.cursor = handleType === 'move' ? 'move' : 'grabbing';
+}
+
+function continueObjectTransform(event) {
+  if (!isObjectTransformActive()) return;
+  const {
+    element,
+    startRect,
+    handleType,
+    anchorX,
+    anchorY,
+    pointerOffsetX,
+    pointerOffsetY,
+    pointerDownX,
+    pointerDownY,
+    hasMoved,
+  } = objectTransform;
+  if (!element || !objectSelectedBox) return;
+
+  const cursor = clientToSlidePoint(event.clientX, event.clientY);
+  const adjustedCursorX = cursor.x - pointerOffsetX;
+  const adjustedCursorY = cursor.y - pointerOffsetY;
+  const dx = adjustedCursorX - anchorX;
+  const dy = adjustedCursorY - anchorY;
+
+  if (!hasMoved && Math.abs(cursor.x - pointerDownX) <= OBJECT_MOVE_EPSILON && Math.abs(cursor.y - pointerDownY) <= OBJECT_MOVE_EPSILON) {
+    return;
+  }
+
+  objectTransform.hasMoved = true;
+
+  const nextRect = clampObjectGeometry(startRect, dx, dy, handleType);
+
+  objectTransform.nextRect = nextRect;
+  applyObjectGeometryToElement(element, nextRect);
+  applyOverlayRect(objectSelectedBox, nextRect);
+}
+
+function endObjectTransform() {
+  if (!isObjectTransformActive()) return;
+  const stateSnapshot = objectTransform;
+  objectTransform = null;
+  if (objectSelectedBox) {
+    objectSelectedBox.style.cursor = '';
+    renderObjectSelection();
+  }
+
+  const snapshotRect = stateSnapshot?.startRect;
+  const element = stateSnapshot?.element;
+  const finalRect = stateSnapshot?.nextRect || snapshotRect;
+  const hasMoved = Boolean(stateSnapshot?.hasMoved);
+
+  if (!hasMoved) return;
+
+  suppressNextObjectClick = true;
+  window.setTimeout(() => {
+    suppressNextObjectClick = false;
+  }, 0);
+
+  if (element && finalRect && snapshotRect) {
+    if (
+      finalRect.x !== snapshotRect.x ||
+      finalRect.y !== snapshotRect.y ||
+      finalRect.width !== snapshotRect.width ||
+      finalRect.height !== snapshotRect.height
+    ) {
+      applyObjectGeometryToElement(element, finalRect);
+      commitObjectTransform({ beforeHtml: stateSnapshot?.startHtml || '' });
+    }
+  }
+}
+
+export function initObjectInteractionEvents() {
+  if (!objectLayer) return;
+  objectSelectedBox.addEventListener('mousedown', beginObjectTransform);
+  window.addEventListener('mousemove', continueObjectTransform);
+  window.addEventListener('mouseup', endObjectTransform);
+}
+
 export function renderObjectSelection() {
   const selectedEl = state.toolMode === TOOL_MODE_SELECT ? getSelectedObjectElement() : null;
   const hoveredEl = state.toolMode === TOOL_MODE_SELECT
@@ -213,6 +501,9 @@ export function updateToolModeUI() {
   const isDraw = state.toolMode === TOOL_MODE_DRAW;
   slidePanel.classList.toggle('mode-draw', isDraw);
   slidePanel.classList.toggle('mode-select', !isDraw);
+  if (objectLayer) {
+    objectLayer.style.pointerEvents = isDraw ? 'none' : 'auto';
+  }
   toolModeDrawBtn.classList.toggle('active', isDraw);
   toolModeSelectBtn.classList.toggle('active', !isDraw);
   toolModeDrawBtn.setAttribute('aria-pressed', isDraw ? 'true' : 'false');
@@ -231,6 +522,9 @@ export function setToolMode(mode) {
   state.drawing = false;
   state.drawStart = null;
   drawBox.style.display = 'none';
+  if (isObjectTransformActive()) {
+    endObjectTransform();
+  }
   if (state.toolMode !== TOOL_MODE_SELECT) {
     state.hoveredObjectXPath = '';
   }

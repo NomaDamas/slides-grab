@@ -18,7 +18,7 @@
  *
  * VALIDATION:
  *   - Uses body width/height from HTML for viewport sizing
- *   - Throws error if HTML dimensions don't match presentation layout
+ *   - Throws if HTML dimensions don't match the layout, or scales same-ratio content with fitToLayout
  *   - Throws error if content overflows body (with overflow details)
  *
  * RETURNS:
@@ -28,10 +28,14 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const sharp = require('sharp');
+const {
+  getLayoutScale,
+  scaleSlideData,
+  validateDimensions,
+} = require('./html2pptx-scale.cjs');
 
 const PT_PER_PX = 0.75;
 const PX_PER_IN = 96;
-const EMU_PER_IN = 914400;
 
 async function launchBrowser(tmpDir) {
   const launchOptions = { env: { TMPDIR: tmpDir } };
@@ -134,6 +138,23 @@ async function waitForDynamicLibraryRender(page, timeout = 5000) {
 
 async function rasterizeDynamicVisuals(page) {
   await page.evaluate(async () => {
+    const isVisuallyHidden = (element) => {
+      const elementComputed = window.getComputedStyle(element);
+      if (elementComputed.visibility === 'hidden' || elementComputed.visibility === 'collapse') {
+        return true;
+      }
+      for (let current = element; current; current = current.parentElement) {
+        const computed = window.getComputedStyle(current);
+        if (computed.display === 'none') return true;
+        if (Number.parseFloat(computed.opacity) <= 0) return true;
+      }
+      return false;
+    };
+
+    const hasVisibleDescendant = (element) => Array.from(element.children).some(
+      (child) => !isVisuallyHidden(child) || hasVisibleDescendant(child),
+    );
+
     const waitForImageLoad = (img) => new Promise((resolve) => {
       if (img.complete) {
         resolve();
@@ -148,6 +169,7 @@ async function rasterizeDynamicVisuals(page) {
     const canvasList = Array.from(document.querySelectorAll('canvas'));
     for (const canvas of canvasList) {
       try {
+        if (isVisuallyHidden(canvas)) continue;
         const rect = canvas.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
 
@@ -161,6 +183,7 @@ async function rasterizeDynamicVisuals(page) {
         img.style.width = `${rect.width}px`;
         img.style.height = `${rect.height}px`;
         img.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
+        img.style.visibility = computed.visibility;
         img.style.objectFit = 'contain';
         if (canvas.className) img.className = canvas.className;
         if (canvas.id) img.id = `${canvas.id}-rendered`;
@@ -175,6 +198,9 @@ async function rasterizeDynamicVisuals(page) {
     const svgList = Array.from(document.querySelectorAll('svg'));
     for (const svg of svgList) {
       try {
+        const svgIsHidden = isVisuallyHidden(svg);
+        const hasVisibilityOverride = svgIsHidden && hasVisibleDescendant(svg);
+        if (svgIsHidden && !hasVisibilityOverride) continue;
         const rect = svg.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
 
@@ -203,7 +229,10 @@ async function rasterizeDynamicVisuals(page) {
         img.style.width = `${rect.width}px`;
         img.style.height = `${rect.height}px`;
         img.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
+        img.style.visibility = hasVisibilityOverride ? 'visible' : computed.visibility;
         img.style.objectFit = 'contain';
+        if (svg.className && typeof svg.className.baseVal === 'string') img.className = svg.className.baseVal;
+        if (svg.id) img.id = `${svg.id}-rendered`;
 
         svg.replaceWith(img);
         await waitForImageLoad(img);
@@ -244,26 +273,6 @@ async function getBodyDimensions(page) {
   }
 
   return { ...bodyDimensions, errors };
-}
-
-// Helper: Validate dimensions match presentation layout
-function validateDimensions(bodyDimensions, pres) {
-  const errors = [];
-  const widthInches = bodyDimensions.width / PX_PER_IN;
-  const heightInches = bodyDimensions.height / PX_PER_IN;
-
-  if (pres.presLayout) {
-    const layoutWidth = pres.presLayout.width / EMU_PER_IN;
-    const layoutHeight = pres.presLayout.height / EMU_PER_IN;
-
-    if (Math.abs(layoutWidth - widthInches) > 0.1 || Math.abs(layoutHeight - heightInches) > 0.1) {
-      errors.push(
-        `HTML dimensions (${widthInches.toFixed(1)}" × ${heightInches.toFixed(1)}") ` +
-        `don't match presentation layout (${layoutWidth.toFixed(1)}" × ${layoutHeight.toFixed(1)}")`
-      );
-    }
-  }
-  return errors;
 }
 
 function validateTextBoxPosition(slideData, bodyDimensions) {
@@ -467,6 +476,28 @@ async function extractSlideData(page) {
       return Math.round((1 - alpha) * 100);
     };
 
+    const isVisuallyHidden = (element) => {
+      const elementComputed = window.getComputedStyle(element);
+      if (elementComputed.visibility === 'hidden' || elementComputed.visibility === 'collapse') {
+        return true;
+      }
+      for (let current = element; current; current = current.parentElement) {
+        const computed = window.getComputedStyle(current);
+        if (computed.display === 'none') return true;
+        if (Number.parseFloat(computed.opacity) <= 0) return true;
+      }
+      return false;
+    };
+
+    const hasVisibleDescendant = (element) => Array.from(element.children).some(
+      (child) => !isVisuallyHidden(child) || hasVisibleDescendant(child),
+    );
+
+    const hasFullyTransparentText = (computed) => {
+      if (computed.color === 'transparent') return true;
+      return extractAlpha(computed.color) === 100;
+    };
+
     const applyTextTransform = (text, textTransform) => {
       if (textTransform === 'uppercase') return text.toUpperCase();
       if (textTransform === 'lowercase') return text.toLowerCase();
@@ -609,12 +640,18 @@ async function extractSlideData(page) {
     // Parse inline formatting tags (<b>, <i>, <u>, <strong>, <em>, <span>) into text runs
     const parseInlineFormatting = (element, baseOptions = {}, runs = [], baseTextTransform = (x) => x) => {
       let prevNodeIsText = false;
+      const elementComputed = window.getComputedStyle(element);
+      const hidesDirectText = isVisuallyHidden(element) || hasFullyTransparentText(elementComputed);
 
       element.childNodes.forEach((node) => {
         let textTransform = baseTextTransform;
 
         const isText = node.nodeType === Node.TEXT_NODE || node.tagName === 'BR';
         if (isText) {
+          if (hidesDirectText) {
+            prevNodeIsText = false;
+            return;
+          }
           const text = node.tagName === 'BR' ? '\n' : textTransform(node.textContent.replace(/\s+/g, ' '));
           const prevRun = runs[runs.length - 1];
           if (prevNodeIsText && prevRun) {
@@ -626,6 +663,20 @@ async function extractSlideData(page) {
         } else if (node.nodeType === Node.ELEMENT_NODE && node.textContent.trim()) {
           const options = { ...baseOptions };
           const computed = window.getComputedStyle(node);
+          if (isVisuallyHidden(node)) {
+            prevNodeIsText = false;
+            if (hasVisibleDescendant(node)) {
+              parseInlineFormatting(node, options, runs, textTransform);
+            }
+            return;
+          }
+
+          if (computed.color) {
+            options.color = rgbToHex(computed.color);
+            const transparency = extractAlpha(computed.color);
+            if (transparency === null) delete options.transparency;
+            else options.transparency = transparency;
+          }
 
           // Handle inline elements with computed styles
           if (node.tagName === 'SPAN' || node.tagName === 'B' || node.tagName === 'STRONG' || node.tagName === 'I' || node.tagName === 'EM' || node.tagName === 'U') {
@@ -633,11 +684,6 @@ async function extractSlideData(page) {
             if (isBold && !shouldSkipBold(computed.fontFamily)) options.bold = true;
             if (computed.fontStyle === 'italic') options.italic = true;
             if (computed.textDecoration && computed.textDecoration.includes('underline')) options.underline = true;
-            if (computed.color && computed.color !== 'rgb(0, 0, 0)') {
-              options.color = rgbToHex(computed.color);
-              const transparency = extractAlpha(computed.color);
-              if (transparency !== null) options.transparency = transparency;
-            }
             if (computed.fontSize) options.fontSize = pxToPoints(computed.fontSize);
 
             // Apply text-transform on the span element itself
@@ -660,9 +706,10 @@ async function extractSlideData(page) {
               errors.push(`Inline element <${node.tagName.toLowerCase()}> has margin-bottom which is not supported in PowerPoint. Remove margin from inline elements.`);
             }
 
-            // Recursively process the child node. This will flatten nested spans into multiple runs.
-            parseInlineFormatting(node, options, runs, textTransform);
           }
+
+          // Recursively process any visible child element so hidden or unsupported tags cannot leak through parent textContent.
+          parseInlineFormatting(node, options, runs, textTransform);
         }
 
         prevNodeIsText = isText;
@@ -724,6 +771,14 @@ async function extractSlideData(page) {
 
     document.querySelectorAll('*').forEach((el) => {
       if (processed.has(el)) return;
+      if (isVisuallyHidden(el)) {
+        if (textTags.includes(el.tagName) && hasVisibleDescendant(el)) {
+          // Keep the text container so visible descendants can be extracted.
+        } else {
+          processed.add(el);
+          return;
+        }
+      }
 
       // Validate text elements don't have backgrounds, borders, or shadows
       if (textTags.includes(el.tagName)) {
@@ -934,7 +989,11 @@ async function extractSlideData(page) {
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return;
 
-        const liElements = Array.from(el.querySelectorAll('li'));
+        const liElements = Array.from(el.querySelectorAll('li')).filter((li) => !isVisuallyHidden(li));
+        if (liElements.length === 0) {
+          processed.add(el);
+          return;
+        }
         const items = [];
         const ulComputed = window.getComputedStyle(el);
         const ulPaddingLeftPt = pxToPoints(ulComputed.paddingLeft);
@@ -958,6 +1017,14 @@ async function extractSlideData(page) {
           }
           items.push(...runs);
         });
+
+        if (items.length === 0) {
+          liElements.forEach((li) => {
+            processed.add(li);
+          });
+          processed.add(el);
+          return;
+        }
 
         const computed = window.getComputedStyle(liElements[0] || el);
 
@@ -984,7 +1051,9 @@ async function extractSlideData(page) {
           }
         });
 
-        liElements.forEach(li => processed.add(li));
+        liElements.forEach((li) => {
+          processed.add(li);
+        });
         processed.add(el);
         return;
       }
@@ -996,6 +1065,10 @@ async function extractSlideData(page) {
       const text = el.textContent.trim();
       if (rect.width === 0 || rect.height === 0 || !text) return;
 
+      const computed = window.getComputedStyle(el);
+      const hasFormatting = Array.from(el.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
+      if (hasFullyTransparentText(computed) && !hasFormatting) return;
+
       // Validate: Check for manual bullet symbols in text elements (not in lists)
       if (el.tagName !== 'LI' && /^[•\-\*▪▸○●◆◇■□]\s/.test(text.trimStart())) {
         errors.push(
@@ -1005,7 +1078,6 @@ async function extractSlideData(page) {
         return;
       }
 
-      const computed = window.getComputedStyle(el);
       const rotation = getRotation(computed.transform, computed.writingMode);
       const { x, y, w, h } = getPositionAndSize(el, rect, rotation);
 
@@ -1031,15 +1103,17 @@ async function extractSlideData(page) {
 
       if (rotation !== null) baseStyle.rotate = rotation;
 
-      const hasFormatting = el.querySelector('b, i, u, strong, em, span, br');
-
       if (hasFormatting) {
         // Text with inline formatting
         const transformStr = computed.textTransform;
         const runs = parseInlineFormatting(el, {}, [], (str) => applyTextTransform(str, transformStr));
+        if (runs.length === 0) return;
 
         // Adjust lineSpacing based on largest fontSize in runs
         const adjustedStyle = { ...baseStyle };
+        if (runs.some((run) => run.options?.transparency !== 100)) {
+          delete adjustedStyle.transparency;
+        }
         if (adjustedStyle.lineSpacing) {
           const maxFontSize = Math.max(
             adjustedStyle.fontSize,
@@ -1087,24 +1161,24 @@ async function extractSlideData(page) {
 async function html2pptx(htmlFile, pres, options = {}) {
   const {
     tmpDir = process.env.TMPDIR || '/tmp',
-    slide = null
+    slide = null,
+    fitToLayout = false,
+    browser = null
   } = options;
 
   try {
-    const browser = await launchBrowser(tmpDir);
+    const activeBrowser = browser || await launchBrowser(tmpDir);
+    const ownsBrowser = browser === null;
 
     let bodyDimensions;
     let slideData;
 
     const filePath = path.isAbsolute(htmlFile) ? htmlFile : path.join(process.cwd(), htmlFile);
     const validationErrors = [];
+    let page;
 
     try {
-      const page = await browser.newPage();
-      page.on('console', (msg) => {
-        // Log the message text to your test runner's console
-        console.log(`Browser console: ${msg.text()}`);
-      });
+      page = await activeBrowser.newPage();
 
       await page.goto(`file://${filePath}`);
       await waitForDynamicLibraryRender(page);
@@ -1119,7 +1193,11 @@ async function html2pptx(htmlFile, pres, options = {}) {
 
       slideData = await extractSlideData(page);
     } finally {
-      await browser.close();
+      try {
+        if (page) await page.close();
+      } finally {
+        if (ownsBrowser) await activeBrowser.close();
+      }
     }
 
     // Collect all validation errors
@@ -1127,12 +1205,23 @@ async function html2pptx(htmlFile, pres, options = {}) {
       validationErrors.push(...bodyDimensions.errors);
     }
 
-    const dimensionErrors = validateDimensions(bodyDimensions, pres);
+    const dimensionErrors = validateDimensions(bodyDimensions, pres, { fitToLayout });
     if (dimensionErrors.length > 0) {
       validationErrors.push(...dimensionErrors);
     }
 
-    const textBoxPositionErrors = validateTextBoxPosition(slideData, bodyDimensions);
+    let effectiveBodyDimensions = bodyDimensions;
+    if (fitToLayout) {
+      const scale = getLayoutScale(bodyDimensions, pres);
+      scaleSlideData(slideData, scale);
+      effectiveBodyDimensions = {
+        ...bodyDimensions,
+        width: bodyDimensions.width * scale.x,
+        height: bodyDimensions.height * scale.y,
+      };
+    }
+
+    const textBoxPositionErrors = validateTextBoxPosition(slideData, effectiveBodyDimensions);
     if (textBoxPositionErrors.length > 0) {
       validationErrors.push(...textBoxPositionErrors);
     }
@@ -1164,3 +1253,4 @@ async function html2pptx(htmlFile, pres, options = {}) {
 }
 
 module.exports = html2pptx;
+module.exports.launchBrowser = launchBrowser;

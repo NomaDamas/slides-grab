@@ -12,10 +12,9 @@
 //      No per-model test additions needed.
 
 export const CODEX_MODELS = [
-  'gpt-5.5',
-  'gpt-5.4',
-  'gpt-5.3-codex',
-  'gpt-5.3-codex-spark',
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
 ];
 
 export const CLAUDE_MODELS = ['claude-opus-4-8', 'claude-sonnet-4-6'];

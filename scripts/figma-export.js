@@ -17,6 +17,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const html2pptx = require('../src/html2pptx.cjs');
+const { launchBrowser } = html2pptx;
 const { DEFAULT_SLIDE_MODE, getSlideModeChoices, normalizeSlideMode } = require('../src/slide-mode.cjs');
 
 const DEFAULT_SLIDES_DIR = 'slides';
@@ -140,10 +141,15 @@ async function main() {
 
   console.log(`Exporting ${files.length} slide(s) for Figma from ${slidesDir}`);
 
-  for (const file of files) {
-    const filePath = resolve(slidesDir, file);
-    console.log(`  Processing: ${file}`);
-    await html2pptx(filePath, pres);
+  const browser = await launchBrowser(process.env.TMPDIR || '/tmp');
+  try {
+    for (const file of files) {
+      const filePath = resolve(slidesDir, file);
+      console.log(`  Processing: ${file}`);
+      await html2pptx(filePath, pres, { browser });
+    }
+  } finally {
+    await browser.close();
   }
 
   await ensureOutputDirectory(outputFile);

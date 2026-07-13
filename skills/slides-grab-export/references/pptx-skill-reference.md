@@ -33,11 +33,12 @@ If prerequisites are not met, guide the user to review slides in `<slides-dir>/v
    - Verify HTML files exist in selected `--slides-dir` (default: `slides/`)
    - Validate each file is 720pt x 405pt (16:9) specification
 
-2. **Run html2pptx.js** (experimental / unstable)
+2. **Run the editable-text engine** (experimental / unstable)
    ```bash
-   slides-grab convert --slides-dir <path> --output presentation.pptx
+   slides-grab convert --slides-dir <path> --output presentation.pptx --engine text
    ```
    - Use the packaged `slides-grab convert` command rather than runtime-local skill scripts.
+   - Omit `--engine text` to use the default raster engine for higher visual fidelity.
 
 3. **Verify results**
    - Check generated PPTX file carefully; expect best-effort fidelity only
@@ -49,7 +50,7 @@ If prerequisites are not met, guide the user to review slides in `<slides-dir>/v
 The packaged runtime exposes PPTX conversion through `slides-grab convert`. Do not import converter files from runtime-local skill directories in installed-agent workflows.
 
 ```bash
-slides-grab convert --slides-dir <path> --output presentation.pptx
+slides-grab convert --slides-dir <path> --output presentation.pptx --engine text
 ```
 
 ### Thumbnail / OOXML Inspection

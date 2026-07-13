@@ -221,6 +221,8 @@ await html2pptx(htmlFile, pres, options)
 - `options` (object, optional):
   - `tmpDir` (string): Temporary directory for generated files (default: `process.env.TMPDIR || '/tmp'`)
   - `slide` (object): Existing slide to reuse (default: creates new slide)
+  - `fitToLayout` (boolean): Scale extracted positions and typography to the configured presentation layout when the HTML has the same aspect ratio (default: `false`)
+  - `browser` (Playwright Browser): Existing browser instance to reuse across multiple slides (default: launches and closes one browser for the call)
 
 #### Returns
 ```javascript
