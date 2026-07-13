@@ -354,19 +354,24 @@ program
     await runCommand('scripts/generate-image.js', args);
   });
 
-program
-  .command('edit')
-  .description('Start interactive slide editor with Codex image-based edit flow')
-  .option('--port <number>', 'Server port')
-  .option('--slides-dir <path>', 'Slide directory', 'slides')
-  .option('--mode <mode>', 'Slide mode: presentation or card-news', 'presentation')
-  .action(async (options = {}) => {
-    const args = ['--slides-dir', options.slidesDir, '--mode', options.mode];
-    if (options.port) {
-      args.push('--port', String(options.port));
-    }
-    await runCommand('scripts/editor-server.js', args);
-  });
+function registerEditorCommand(commandName, editorType, description) {
+  program
+    .command(commandName)
+    .description(description)
+    .option('--port <number>', 'Server port')
+    .option('--slides-dir <path>', 'Slide directory', 'slides')
+    .option('--mode <mode>', 'Slide mode: presentation or card-news', 'presentation')
+    .action(async (options = {}) => {
+      const args = ['--editor', editorType, '--slides-dir', options.slidesDir, '--mode', options.mode];
+      if (options.port) {
+        args.push('--port', String(options.port));
+      }
+      await runCommand('scripts/editor-server.js', args);
+    });
+}
+
+registerEditorCommand('edit', 'html', 'Start interactive HTML slide editor with Codex image-based edit flow');
+registerEditorCommand('edit-image', 'image', 'Start interactive image-native slide editor');
 
 // --- Template/style discovery commands ---
 

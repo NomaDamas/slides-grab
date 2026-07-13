@@ -34,7 +34,13 @@ async function createHtmlWorkspace() {
 
 function spawnEditorServer(workspace, port, { env = {} } = {}) {
   const output = { value: '' };
-  const child = spawn(process.execPath, [join(REPO_ROOT, 'scripts', 'editor-server.js'), '--port', String(port)], {
+  const child = spawn(process.execPath, [
+    join(REPO_ROOT, 'scripts', 'editor-server.js'),
+    '--editor',
+    'image',
+    '--port',
+    String(port),
+  ], {
     cwd: workspace,
     env: {
       ...process.env,

@@ -65,6 +65,7 @@ const MAX_RUNS = 200;
 const MAX_LOG_CHARS = 800_000;
 const EDIT_TIMEOUT_MS = parseEditTimeoutMs();
 const IMAGE_REGEN_DELAY_MS = Number.parseInt(process.env.PPT_AGENT_IMAGE_REGEN_DELAY_MS || '0', 10) || 0;
+const EDITOR_TYPES = ['html', 'image'];
 
 function waitForImageRegenerationDelay(signal) {
   if (IMAGE_REGEN_DELAY_MS <= 0) return Promise.resolve();
@@ -82,12 +83,21 @@ function isImageNativeSlideHtml(html) {
     /<meta\s+name=["']slides-grab-image-native-metadata["']\s+content=["'][^"']+["']/i.test(html);
 }
 
+function normalizeEditorType(rawEditorType) {
+  const editorType = typeof rawEditorType === 'string' ? rawEditorType.trim() : '';
+  if (!EDITOR_TYPES.includes(editorType)) {
+    throw new Error('`--editor` must be one of: html, image.');
+  }
+  return editorType;
+}
+
 function printUsage() {
   process.stdout.write(`Usage: slides-grab edit [options]\n\n`);
   process.stdout.write(`Options:\n`);
   process.stdout.write(`  --port <number>           Server port (default: ${DEFAULT_PORT})\n`);
   process.stdout.write(`  --slides-dir <path>       Slide directory (default: ${DEFAULT_SLIDES_DIR})\n`);
   process.stdout.write(`  --mode <mode>             Slide mode: ${getSlideModeChoices().join(', ')} (default: ${DEFAULT_SLIDE_MODE})\n`);
+  process.stdout.write(`  --editor <type>           Editor type: html or image (default: html)\n`);
   process.stdout.write(`  Model is selected in editor UI dropdown.\n`);
   process.stdout.write(`  -h, --help                Show this help message\n`);
 }
@@ -97,6 +107,7 @@ function parseArgs(argv) {
     port: DEFAULT_PORT,
     slidesDir: DEFAULT_SLIDES_DIR,
     mode: DEFAULT_SLIDE_MODE,
+    editor: 'html',
     help: false,
   };
 
@@ -140,6 +151,17 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === '--editor') {
+      opts.editor = normalizeEditorType(argv[i + 1]);
+      i += 1;
+      continue;
+    }
+
+    if (arg.startsWith('--editor=')) {
+      opts.editor = normalizeEditorType(arg.slice('--editor='.length));
+      continue;
+    }
+
     if (arg === '--codex-model') {
       // Backward compatibility: ignore legacy CLI option.
       i += 1;
@@ -159,6 +181,7 @@ function parseArgs(argv) {
 
   opts.slidesDir = opts.slidesDir.trim();
   opts.mode = normalizeSlideMode(opts.mode);
+  opts.editor = normalizeEditorType(opts.editor);
 
   return opts;
 }
@@ -690,6 +713,7 @@ async function startServer(opts) {
   app.get('/api/config', (_req, res) => {
     const cfg = getSlideModeConfig(opts.mode);
     res.json({
+      editorType: opts.editor,
       slideMode: opts.mode,
       framePx: { width: cfg.framePx.width, height: cfg.framePx.height },
       screenshotPx: { width: cfg.screenshotPx.width, height: cfg.screenshotPx.height },
@@ -743,6 +767,13 @@ async function startServer(opts) {
   app.post('/api/apply', async (req, res) => {
     const { slide, prompt, selections, model, mode, provider, baseUrl } = req.body ?? {};
 
+    if (mode !== undefined && mode !== opts.editor) {
+      const command = mode === 'image' ? 'slides-grab edit-image' : 'slides-grab edit';
+      return res.status(400).json({
+        error: `Configured editor is ${opts.editor}; request body.mode is ${String(mode)}. Use ${command} or omit body.mode.`,
+      });
+    }
+
     if (!slide || typeof slide !== 'string' || !SLIDE_FILE_PATTERN.test(slide)) {
       return res.status(400).json({ error: 'Missing or invalid `slide`.' });
     }
@@ -751,7 +782,7 @@ async function startServer(opts) {
       return res.status(400).json({ error: 'Missing or invalid `prompt`.' });
     }
 
-    const applyMode = mode === 'image' ? 'image' : 'html';
+    const applyMode = opts.editor;
 
     let selectedModel;
     if (applyMode === 'image') {
@@ -1022,6 +1053,7 @@ async function startServer(opts) {
   process.stdout.write('  ─────────────────────────────────────\n');
   process.stdout.write(`  Local:       http://localhost:${opts.port}\n`);
   process.stdout.write(`  Models:      ${ALL_MODELS.join(', ')}\n`);
+  process.stdout.write(`  Editor:      ${opts.editor}\n`);
   process.stdout.write(`  Slides:      ${slidesDirectory}\n`);
   process.stdout.write('  ─────────────────────────────────────\n\n');
 
