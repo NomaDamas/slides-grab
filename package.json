@@ -63,7 +63,7 @@
     "validate": "node scripts/validate-slides.js",
     "convert": "node convert.cjs",
     "test": "node --test --test-concurrency=1 tests/docs/readme-ko.test.js tests/docs/template-workflow-docs.test.js tests/design/design-styles.test.js tests/design/design-md-parser.test.js tests/design/template-pack.test.js tests/design/template-import.test.js tests/design/template-layout.test.js tests/design/image-native.test.js tests/design-gate/design-gate.test.js tests/runtime/install-runtime.test.js tests/editor/editor-codex-edit.test.js tests/editor/edit-subprocess-abort.test.js tests/editor/editor-mode-split.test.js tests/editor/editor-server.test.js tests/editor/editor-image-mode.test.js tests/editor/editor-server-orphan-prevention.test.js tests/editor/editor-model-dispatch.test.js tests/editor/editor-object-transform.e2e.test.js tests/god-tibo/god-tibo.test.js tests/nano-banana/nano-banana.test.js tests/pdf/html2pdf.test.js tests/pdf/html2pdf.e2e.test.js tests/figma/figma-export.test.js tests/pptx/convert-cli.test.js tests/pptx/html2pptx-scale.test.js tests/image-contract/image-contract.test.js tests/tldraw/render-tldraw.test.js tests/validation/validate-slides.test.js tests/viewer/build-viewer.test.js tests/skills/installable-skills.test.js tests/video/download-video.test.js",
-    "test:e2e": "node --test tests/editor/editor-ui.e2e.test.js tests/editor/editor-concurrency.e2e.test.js"
+    "test:e2e": "node --test tests/editor/editor-ui.e2e.test.js tests/editor/editor-client-split.e2e.test.js tests/editor/editor-concurrency.e2e.test.js"
   },
   "dependencies": {
     "commander": "^12.1.0",

@@ -329,7 +329,7 @@ function extractImageNativeMetadataRef(html) {
 
 function ensureImageNativeHtml(html, slideFile) {
   if (!/<meta\s+name=["']slides-grab-image-native["']\s+content=["']true["']/i.test(html)) {
-    throw new Error(`${slideFile} is not an image-native slide. Run slides-grab generate-images first or choose HTML Edit mode.`);
+    throw new Error(`${slideFile} is not an image-native slide. Generate it with slides-grab image or open HTML slides with slides-grab edit.`);
   }
   const metadataRef = extractImageNativeMetadataRef(html);
   if (!metadataRef) {

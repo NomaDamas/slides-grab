@@ -137,7 +137,34 @@ test('/api/apply image mode rejects non-image-native slides with useful error', 
 
     assert.equal(res.status, 400);
     assert.match(body.error, /not an image-native slide/i);
-    assert.match(body.error, /HTML Edit mode/i);
+    assert.match(body.error, /slides-grab edit/i);
+  } finally {
+    await stopChild(server.child);
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test('/api/slides/:file/save is unavailable in image editor and leaves slide HTML unchanged', async () => {
+  const { workspace, slidesDir } = await createImageNativeWorkspace();
+  const slidePath = join(slidesDir, 'slide-01.html');
+  const beforeHtml = await readFile(slidePath, 'utf8');
+  const port = await getAvailablePort();
+  const server = spawnEditorServer(workspace, port);
+
+  try {
+    await waitForServerReady(port, server.child, server.output);
+    const res = await fetch(`http://localhost:${port}/api/slides/slide-01.html/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slide: 'slide-01.html',
+        html: beforeHtml.replace('</body>', '<p>Direct image-editor mutation</p></body>'),
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+
+    assert.ok([400, 405].includes(res.status), `expected direct save rejection, got ${res.status}: ${JSON.stringify(body)}`);
+    assert.equal(await readFile(slidePath, 'utf8'), beforeHtml);
   } finally {
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });
@@ -211,13 +238,15 @@ test('/api/apply image mode uses active-run conflict and cancellation plumbing',
   }
 });
 
-test('editor UI exposes image regeneration mode and sends image payload fields', async () => {
+test('editor client removes the unified apply-mode control and consumes fixed editorType config', async () => {
   const html = await readFile(join(REPO_ROOT, 'src', 'editor', 'editor.html'), 'utf8');
+  const initJs = await readFile(join(REPO_ROOT, 'src', 'editor', 'js', 'editor-init.js'), 'utf8');
   const sendJs = await readFile(join(REPO_ROOT, 'src', 'editor', 'js', 'editor-send.js'), 'utf8');
 
-  assert.match(html, /Image Regenerate/);
-  assert.match(html, /id="apply-mode-select"/);
+  assert.doesNotMatch(html, /id="apply-mode-select"/);
   assert.match(html, /id="image-provider-select"/);
-  assert.match(sendJs, /mode: applyMode/);
-  assert.match(sendJs, /provider: imageProvider/);
+  assert.match(html, /id="model-section"/);
+  assert.match(initJs, /editorType/);
+  assert.doesNotMatch(initJs, /applyModeSelect/);
+  assert.doesNotMatch(sendJs, /applyModeSelect/);
 });

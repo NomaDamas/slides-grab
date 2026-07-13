@@ -660,6 +660,12 @@ async function startServer(opts) {
   });
 
   app.post('/api/slides/:file/save', async (req, res) => {
+    if (opts.editor === 'image') {
+      return res.status(405).json({
+        error: 'Direct slide HTML save is unavailable in Image Editor.',
+      });
+    }
+
     let file;
     try {
       file = normalizeSlideFilename(req.params.file, '`slide`');
@@ -813,7 +819,7 @@ async function startServer(opts) {
       const slideHtml = await readFile(join(slidesDirectory, slide), 'utf8').catch(() => '');
       if (!isImageNativeSlideHtml(slideHtml)) {
         return res.status(400).json({
-          error: `${slide} is not an image-native slide. Run slides-grab generate-images first or use HTML Edit mode.`,
+          error: `${slide} is not an image-native slide. Generate it with slides-grab image or open HTML slides with slides-grab edit.`,
         });
       }
     }

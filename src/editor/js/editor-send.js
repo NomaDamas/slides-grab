@@ -1,11 +1,12 @@
 // editor-send.js — API submission (applyChanges), updateSendState
 
 import { state, runsById, activeRunBySlide, pendingRequestBySlide } from './editor-state.js';
-import { slideStatusChip, btnSend, btnClearBboxes, promptInput, modelSelect, applyModeSelect, imageProviderSection, imageProviderSelect } from './editor-dom.js';
+import { slideStatusChip, btnSend, btnClearBboxes, promptInput, imageProviderSelect } from './editor-dom.js';
 import { currentSlideFile, getSlideState, getLatestRunForSlide, normalizeBoxStatus, normalizeModelName, setStatus } from './editor-utils.js';
 import { addChatMessage, renderRunsList } from './editor-chat.js';
 import { renderBboxes, extractTargetsForBox } from './editor-bbox.js';
 import { flushDirectSaveForSlide } from './editor-direct-edit.js';
+import { buildApplyRequestBody, getEditorClient } from './editor-type.js';
 
 export function updateSlideStatusChip() {
   const slide = currentSlideFile();
@@ -42,14 +43,11 @@ export function updateSendState() {
   const prompt = (promptInput.value || '').trim();
   const pendingCount = ss.boxes.filter((box) => normalizeBoxStatus(box.status) === 'pending').length;
   const blocked = pendingRequestBySlide.has(slide) || activeRunBySlide.has(slide);
-  const model = normalizeModelName(ss.model);
+  const editorClient = getEditorClient();
+  const model = editorClient.usesModel ? normalizeModelName(ss.model) : '';
 
-  const applyMode = applyModeSelect?.value === 'image' ? 'image' : 'html';
-  state.applyMode = applyMode;
   state.imageProvider = imageProviderSelect?.value || 'dry-run';
-  if (imageProviderSection) imageProviderSection.hidden = applyMode !== 'image';
-  btnSend.title = applyMode === 'image' ? 'Regenerate slide image' : 'Run HTML edit';
-  btnSend.disabled = !prompt || pendingCount === 0 || blocked || !model;
+  btnSend.disabled = !prompt || pendingCount === 0 || blocked || (editorClient.usesModel && !model);
   btnClearBboxes.disabled = ss.boxes.length === 0 || blocked;
   updateSlideStatusChip();
 }
@@ -58,16 +56,16 @@ export async function applyChanges() {
   const slide = currentSlideFile();
   if (!slide) return;
 
-  await flushDirectSaveForSlide(slide);
+  const editorClient = getEditorClient();
+  if (editorClient.supportsDirectSave) await flushDirectSaveForSlide(slide);
 
   const ss = getSlideState(slide);
   const prompt = (promptInput.value || '').trim();
   const pendingBoxes = ss.boxes.filter((box) => normalizeBoxStatus(box.status) === 'pending');
-  const model = normalizeModelName(ss.model) || state.selectedModel || state.defaultModel;
-
-  const applyMode = applyModeSelect?.value === 'image' ? 'image' : 'html';
+  const model = editorClient.usesModel
+    ? normalizeModelName(ss.model) || state.selectedModel || state.defaultModel
+    : '';
   const imageProvider = imageProviderSelect?.value || 'dry-run';
-  state.applyMode = applyMode;
   state.imageProvider = imageProvider;
   if (!prompt) return;
   if (pendingBoxes.length === 0) {
@@ -83,30 +81,29 @@ export async function applyChanges() {
     y: box.y,
     width: box.width,
     height: box.height,
-    targets: extractTargetsForBox(box),
+    targets: editorClient.includesSelectionTargets ? extractTargetsForBox(box) : [],
   }));
 
-  addChatMessage('user', `[${slide}] [${applyMode === 'image' ? `image:${imageProvider}` : model}] ${prompt}`, slide);
+  addChatMessage('user', `[${slide}] [${editorClient.usesImageProvider ? `image:${imageProvider}` : model}] ${prompt}`, slide);
 
   pendingRequestBySlide.add(slide);
   ss.prompt = '';
   promptInput.value = '';
   updateSendState();
-  const engineLabel = applyMode === 'image' ? `Image ${imageProvider}` : model.startsWith('claude-') ? 'Claude' : 'Codex';
+  const engineLabel = editorClient.usesImageProvider ? `Image ${imageProvider}` : model.startsWith('claude-') ? 'Claude' : 'Codex';
   setStatus(`Submitting ${slide} to ${engineLabel}...`);
 
   try {
     const res = await fetch('/api/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(buildApplyRequestBody({
         slide,
         prompt,
         model,
         selections,
-        mode: applyMode,
         provider: imageProvider,
-      }),
+      })),
     });
 
     const data = await res.json().catch(() => ({}));

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slide Editor - ppt-agent</title>
+  <title>HTML Editor - slides-grab</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
     :root {
@@ -32,6 +32,12 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body:not([data-editor-type]) [data-editor-client],
+    body[data-editor-type="html"] [data-editor-client="image"],
+    body[data-editor-type="image"] [data-editor-client="html"] {
+      display: none !important;
+    }
 
     html, body {
       width: 100%;
@@ -1611,7 +1617,7 @@
       </div>
       <div class="nav-spacer"></div>
       <span class="slide-status-chip idle" id="slide-status-chip">idle</span>
-      <span class="brand">ppt-agent</span>
+      <span class="brand" id="editor-brand">HTML Editor</span>
     </div>
 
     <div class="main-content">
@@ -1621,7 +1627,7 @@
             <button class="clear-overlay-btn" id="btn-clear-bboxes" title="Clear all boxes on current slide">Clear Boxes</button>
             <iframe id="slide-iframe" sandbox="allow-same-origin allow-scripts" loading="eager"></iframe>
             <div class="bbox-layer" id="bbox-layer"></div>
-            <div class="object-layer" id="object-layer">
+            <div class="object-layer" id="object-layer" data-editor-client="html">
               <div class="object-outline hover" id="object-hover-box"></div>
               <div class="object-outline selected" id="object-selected-box">
                 <span class="object-handle" data-object-handle="nw" aria-hidden="true"></span>
@@ -1647,7 +1653,7 @@
             <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM9 5v14M15 5v14M5 9h14M5 15h14"/></svg>
             BBox
           </button>
-          <button type="button" class="sidebar-mode-tab" id="tool-mode-select" aria-pressed="false">
+          <button type="button" class="sidebar-mode-tab" id="tool-mode-select" data-editor-client="html" aria-pressed="false">
             <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 4 11 8-5 1.2L14.6 20l-2.5 1-2.6-6.8L6 15z"/></svg>
             Select
           </button>
@@ -1663,14 +1669,7 @@
               <span class="sidebar-label">Prompt</span>
               <textarea id="prompt-input" class="sidebar-textarea" placeholder="Describe the edit for red bboxes..." rows="3"></textarea>
             </div>
-            <div class="sidebar-section">
-              <span class="sidebar-label">Edit mode</span>
-              <select id="apply-mode-select" class="model-select" aria-label="Editor apply mode">
-                <option value="html">HTML Edit</option>
-                <option value="image">Image Regenerate</option>
-              </select>
-            </div>
-            <div class="sidebar-section" id="image-provider-section" hidden>
+            <div class="sidebar-section" id="image-provider-section" data-editor-client="image">
               <span class="sidebar-label">Image provider</span>
               <select id="image-provider-select" class="model-select" aria-label="Image regeneration provider">
                 <option value="dry-run">dry-run</option>
@@ -1679,7 +1678,7 @@
                 <option value="nano-banana">nano-banana</option>
               </select>
             </div>
-            <div class="sidebar-section">
+            <div class="sidebar-section" id="model-section" data-editor-client="html">
               <span class="sidebar-label">Model</span>
               <select id="model-select" class="model-select">
                 <option value="gpt-5.6-sol">gpt-5.6-sol</option>
@@ -1691,11 +1690,11 @@
             </div>
             <button class="sidebar-btn" id="btn-send" title="Run Codex">
               <svg class="btn-send-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 11.2 19.6 4.4c.8-.3 1.7.5 1.4 1.4l-6.8 16.2c-.3.8-1.4.9-1.9.1L9.2 16l-6.1-3.1c-.8-.5-.7-1.6.3-1.7Zm5.1 3.6 3.2 1.6 4.9-11.7-11.7 4.9 3.6 1.8 6.2-3.7c.4-.2.8.1.6.6l-6.8 6.5Z"/></svg>
-              Run Codex
+              <span id="btn-send-label">Run HTML Edit</span>
             </button>
           </div>
 
-          <div class="sidebar-panel" id="select-toolbar" hidden>
+          <div class="sidebar-panel" id="select-toolbar" data-editor-client="html" hidden>
             <div class="sidebar-section">
               <div class="sidebar-object-card" id="selected-object-mini" style="display:none">
                 <span class="mini-tag" id="mini-tag"></span>
@@ -1768,7 +1767,7 @@
         </div>
 
         <div class="sidebar-hint" id="editor-hint">
-          Drag on the slide to add red bboxes. Enter to run.
+          HTML Editor: drag on the slide to add red bboxes. Cmd/Ctrl+Enter to run.
         </div>
       </aside>
     </div>
