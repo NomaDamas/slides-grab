@@ -29,6 +29,7 @@ import {
 } from '../src/editor/edit-subprocess.js';
 import { buildSlideRuntimeHtml } from '../src/image-contract.js';
 import { regenerateImageNativeSlide } from '../src/image-native.js';
+import { GOD_TIBO_DEFAULT_MODEL } from '../src/god-tibo-imagen.js';
 
 const require = createRequire(import.meta.url);
 const {
@@ -65,6 +66,7 @@ const MAX_RUNS = 200;
 const MAX_LOG_CHARS = 800_000;
 const EDIT_TIMEOUT_MS = parseEditTimeoutMs();
 const IMAGE_REGEN_DELAY_MS = Number.parseInt(process.env.PPT_AGENT_IMAGE_REGEN_DELAY_MS || '0', 10) || 0;
+const MOCK_IMAGE_PROVIDER = Boolean(process.env.PPT_AGENT_MOCK_IMAGE_PROVIDER);
 const EDITOR_TYPES = ['html', 'image'];
 
 function waitForImageRegenerationDelay(signal) {
@@ -76,6 +78,14 @@ function waitForImageRegenerationDelay(signal) {
       rejectPromise(new Error('Image regeneration was aborted.'));
     }, { once: true });
   });
+}
+const MOCK_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+  'base64',
+);
+
+function mockImageGenerateImpl() {
+  return async () => ({ mimeType: 'image/png', bytes: MOCK_PNG });
 }
 
 function isImageNativeSlideHtml(html) {
@@ -818,7 +828,7 @@ async function startServer(opts) {
 
     let selectedModel;
     if (applyMode === 'image') {
-      selectedModel = typeof model === 'string' && model.trim() ? model.trim() : 'dry-run-image';
+      selectedModel = typeof model === 'string' && model.trim() ? model.trim() : GOD_TIBO_DEFAULT_MODEL;
     } else {
       try {
         selectedModel = normalizeModel(model);
@@ -896,11 +906,12 @@ async function startServer(opts) {
           prompt,
           selections: normalizedSelections,
           signal: abortController.signal,
-          provider: provider || 'dry-run',
+          provider: provider || 'god-tibo',
           model: selectedModel,
           baseUrl: typeof baseUrl === 'string' ? baseUrl : '',
           env: process.env,
           fetchImpl: globalThis.fetch,
+          ...(MOCK_IMAGE_PROVIDER ? { generateImageImpl: mockImageGenerateImpl() } : {}),
         });
         runStore.finishRun(runId, {
           status: 'success',

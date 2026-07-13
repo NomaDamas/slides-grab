@@ -255,8 +255,9 @@ test('image --image-native writes an editor-compatible wrapper and regeneration 
       slidesDir: workspace,
       slideFile: 'slide-01.html',
       prompt: 'Increase title contrast.',
-      provider: 'dry-run',
+      provider: 'god-tibo',
       selections: [{ bbox: { x: 10, y: 20, width: 100, height: 80 }, targets: [] }],
+      generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('regenerated-bytes') }),
     });
     assert.equal(regenerated.regenerationHistoryLength, 1);
   } finally {

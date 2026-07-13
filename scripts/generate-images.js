@@ -4,14 +4,13 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  IMAGE_NATIVE_PROVIDER_DRY_RUN,
   buildImageNativePrompt,
   generateImageNativeSlides,
   parseImageNativeOutline,
 } from '../src/image-native.js';
+import { IMAGE_PROVIDER_GOD_TIBO } from '../src/nano-banana.js';
 
 export {
-  IMAGE_NATIVE_PROVIDER_DRY_RUN,
   buildImageNativePrompt,
   generateImageNativeSlides,
   parseImageNativeOutline,
@@ -28,7 +27,7 @@ export function parseGenerateImagesCliArgs(argv) {
     outline: '',
     slidesDir: 'slides',
     templatePack: '',
-    provider: IMAGE_NATIVE_PROVIDER_DRY_RUN,
+    provider: IMAGE_PROVIDER_GOD_TIBO,
     model: '',
     baseUrl: '',
     help: false,
@@ -121,12 +120,12 @@ export function getGenerateImagesUsage() {
     '  --outline <path>        Markdown slide outline to convert',
     '  --slides-dir <path>     Slide directory (default: slides)',
     '  --template-pack <path>  Optional template-pack.json path; defaults to <slides-dir>/.slides-grab/template-pack.json when present',
-    '  --provider <name>       dry-run (default), god-tibo, codex, or nano-banana',
+    '  --provider <name>       god-tibo (default), codex, or nano-banana',
     '  --model <id>            Optional provider model override',
     '  --base-url <url>        Codex/OpenAI-compatible base URL for provider=codex',
     '  -h, --help              Show this help text',
     '',
-    'Dry-run mode writes deterministic placeholder assets, wrapper HTML, prompts, and regeneration metadata without external API calls.',
+    'Default provider: god-tibo (uses your local Codex ChatGPT login — no API key required).',
   ].join('\n');
 }
 

@@ -38,7 +38,7 @@ async function createImageNativeWorkspace() {
   const slidesDir = join(workspace, 'slides');
   const metadataPath = join(slidesDir, '.slides-grab', 'image-native', 'slide-01.json');
   await writeFile(outlinePath, '# Demo\n\n## Slide 1: Hero\n- Fact: regenerate me\n', 'utf8');
-  await generateImageNativeSlides({ outlinePath, slidesDir, provider: 'dry-run' });
+  await generateImageNativeSlides({ outlinePath, slidesDir, provider: 'god-tibo', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
   return {
     workspace,
     slidesDir,
@@ -55,6 +55,7 @@ function spawnEditorServer(workspace, port, { args = [], env = {} } = {}) {
       ...process.env,
       PPT_AGENT_PACKAGE_ROOT: REPO_ROOT,
       PPT_AGENT_CODEX_BIN: FAKE_CODEX_BIN,
+      PPT_AGENT_MOCK_IMAGE_PROVIDER: '1',
       PPT_AGENT_CLAUDE_BIN: FAKE_CLAUDE_BIN,
       ...env,
     },
@@ -293,8 +294,8 @@ test('image server accepts omitted and image body modes for image-native slides'
       await waitForServerReady(port, server.child, server.output);
       const { response, body } = await postApply(port, applyBody({
         mode,
-        model: 'dry-run-image',
-        provider: 'dry-run',
+        model: 'gpt-5.4',
+        provider: 'god-tibo',
       }));
 
       assert.equal(response.status, 200, JSON.stringify(body));
@@ -320,8 +321,8 @@ test('image server rejects non-image-native slides without file or metadata muta
   try {
     await waitForServerReady(port, server.child, server.output);
     const { response, body } = await postApply(port, applyBody({
-      model: 'dry-run-image',
-      provider: 'dry-run',
+      model: 'gpt-5.4',
+      provider: 'god-tibo',
     }));
 
     assert.equal(response.status, 400, JSON.stringify(body));

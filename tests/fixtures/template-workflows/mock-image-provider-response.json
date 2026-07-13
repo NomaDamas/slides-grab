@@ -1,6 +1,6 @@
 {
-  "provider": "dry-run",
-  "model": "dry-run-image",
+  "provider": "god-tibo",
+  "model": "gpt-5.4",
   "mimeType": "image/png",
   "imageBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lQ7r2wAAAABJRU5ErkJggg==",
   "notes": "Deterministic fixture only; tests must not call external image APIs or require credentials."

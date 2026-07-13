@@ -143,7 +143,7 @@ slides-grab image \
 
 Image-native slides are raster wrappers around generated PNG assets. They are useful for fast visual exploration or image-led concepts, but they are less editable than HTML: revise them with `slides-grab edit-image --slides-dir <path>`, not direct semantic HTML edits. Use HTML mode when the deck must remain highly editable, accessible, searchable, or easy to convert; use image-native mode when visual composition matters more than downstream editability.
 
-OpenAI-compatible image providers can be configured without changing slide files: `slides-grab image --provider codex --base-url <url> --api-key-env <ENV_NAME>`, or environment variables `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, and `OPENAI_BASE_URL`. Tests and fixtures should use `--provider dry-run` or mocked provider responses and must not require external image API credentials.
+OpenAI-compatible image providers can be configured without changing slide files: `slides-grab image --provider codex --base-url <url> --api-key-env <ENV_NAME>`, or environment variables `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, and `OPENAI_BASE_URL`. Tests and fixtures should use mocked provider responses (injected `generateImageImpl` or `PPT_AGENT_MOCK_IMAGE_PROVIDER=1` for the editor server) and must not require external image API credentials.
 
 ## Asset Contract
 

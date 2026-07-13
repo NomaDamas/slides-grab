@@ -1,3 +1,4 @@
+import { main as generateImagesMain } from '../../scripts/generate-images.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -86,8 +87,8 @@ test('buildImageNativePrompt includes template context, selected layout, and tex
   assert.match(prompt, /sharp, legible, correctly spelled/i);
 });
 
-test('generateImageNativeSlides dry-run writes prompts, wrapper slides, and regeneration metadata', async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'image-native-dry-run-'));
+test('generateImageNativeSlides writes prompts, wrapper slides, and regeneration metadata with injected provider', async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'image-native-provider-meta-'));
   const outlinePath = path.join(workspace, 'slide-outline.md');
   const slidesDir = path.join(workspace, 'slides');
 
@@ -97,8 +98,9 @@ test('generateImageNativeSlides dry-run writes prompts, wrapper slides, and rege
       outlinePath,
       slidesDir,
       templatePack,
-      provider: 'dry-run',
-      model: 'dry-run-image',
+      provider: 'god-tibo',
+      model: 'gpt-5.4',
+      generateImageImpl: async () => ({ mimeType: 'image/png', bytes: tinyPng }),
     });
 
     assert.equal(result.slides.length, 2);
@@ -114,8 +116,8 @@ test('generateImageNativeSlides dry-run writes prompts, wrapper slides, and rege
 
     await stat(path.join(slidesDir, 'assets', 'slide-01.png'));
     const metadata = JSON.parse(await readFile(path.join(slidesDir, '.slides-grab', 'image-native', 'slide-01.json'), 'utf8'));
-    assert.equal(metadata.provider, 'dry-run');
-    assert.equal(metadata.model, 'dry-run-image');
+    assert.equal(metadata.provider, 'god-tibo');
+    assert.equal(metadata.model, 'gpt-5.4');
     assert.equal(metadata.templateLayoutId, 'content-metric');
     assert.match(metadata.prompt, /Market map/);
     assert.match(metadata.sourceOutline.markdown, /Slide 1/);
@@ -155,24 +157,26 @@ test('generateImageNativeSlides uses an injected provider and records provider m
   }
 });
 
-test('generate-images script dry-run creates validation-compatible image wrapper slides', async () => {
+test('generate-images script creates validation-compatible image wrapper slides with injected provider', async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'image-native-cli-'));
   const outlinePath = path.join(workspace, 'slide-outline.md');
   const slidesDir = path.join(workspace, 'slides');
   const cliPath = path.join(process.cwd(), 'bin', 'ppt-agent.js');
-  const scriptPath = path.join(process.cwd(), 'scripts', 'generate-images.js');
 
   try {
     await writeFile(outlinePath, outlineMarkdown, 'utf8');
-    const generated = spawnSync(process.execPath, [
-      scriptPath,
+    const stdout = [];
+    const writable = { write: (chunk) => { stdout.push(chunk); return true; } };
+    await generateImagesMain([
       '--outline', outlinePath,
       '--slides-dir', slidesDir,
-      '--provider', 'dry-run',
-    ], { encoding: 'utf8' });
+      '--provider', 'god-tibo',
+    ], {
+      stdout: writable,
+      generateImageImpl: async () => ({ mimeType: 'image/png', bytes: tinyPng }),
+    });
 
-    assert.equal(generated.status, 0, generated.stderr || generated.stdout);
-    assert.match(generated.stdout, /Generated image-native slides: 2/);
+    assert.match(stdout.join(''), /Generated image-native slides: 2/);
 
     const validated = spawnSync(process.execPath, [
       cliPath,

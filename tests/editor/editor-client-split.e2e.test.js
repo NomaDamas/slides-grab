@@ -31,7 +31,7 @@ async function createImageWorkspace() {
   const workspace = await mkdtemp(join(os.tmpdir(), 'editor-client-image-'));
   const outlinePath = join(workspace, 'slide-outline.md');
   await writeFile(outlinePath, '# Demo\n\n## Slide 1: Hero\n- Fact: image editor\n', 'utf8');
-  await generateImageNativeSlides({ outlinePath, slidesDir: join(workspace, 'slides'), provider: 'dry-run' });
+  await generateImageNativeSlides({ outlinePath, slidesDir: join(workspace, 'slides'), provider: 'god-tibo', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
   return workspace;
 }
 

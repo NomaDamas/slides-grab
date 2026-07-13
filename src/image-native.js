@@ -19,22 +19,15 @@ import {
 } from './nano-banana.js';
 import { generateGodTiboImage } from './god-tibo-imagen.js';
 
-export const IMAGE_NATIVE_PROVIDER_DRY_RUN = 'dry-run';
 export const IMAGE_NATIVE_METADATA_DIR = '.slides-grab/image-native';
 
-const DEFAULT_DRY_RUN_MODEL = 'dry-run-image';
-const PNG_PLACEHOLDER = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
-  'base64',
-);
-
 function normalizeProvider(value) {
-  const provider = String(value || IMAGE_NATIVE_PROVIDER_DRY_RUN).trim().toLowerCase();
-  if (!provider || provider === IMAGE_NATIVE_PROVIDER_DRY_RUN) return IMAGE_NATIVE_PROVIDER_DRY_RUN;
+  const provider = String(value || IMAGE_PROVIDER_GOD_TIBO).trim().toLowerCase();
+  if (!provider) return IMAGE_PROVIDER_GOD_TIBO;
   if (provider === 'openai') return IMAGE_PROVIDER_CODEX;
   if (provider === 'gemini') return IMAGE_PROVIDER_NANO_BANANA;
   if (provider === IMAGE_PROVIDER_CODEX || provider === IMAGE_PROVIDER_GOD_TIBO || provider === IMAGE_PROVIDER_NANO_BANANA) return provider;
-  throw new Error(`Unknown image-native provider: ${value}. Expected dry-run, god-tibo, codex, or nano-banana.`);
+  throw new Error(`Unknown image-native provider: ${value}. Expected god-tibo, codex, or nano-banana.`);
 }
 
 function stripSlidePrefix(title) {
@@ -250,9 +243,6 @@ export async function writeImageNativeSlideWrapper({
 }
 
 async function defaultGenerateImage({ prompt, provider, model, env = process.env, baseUrl = '', fetchImpl = globalThis.fetch }) {
-  if (provider === IMAGE_NATIVE_PROVIDER_DRY_RUN) {
-    return { mimeType: 'image/png', bytes: PNG_PLACEHOLDER };
-  }
   if (provider === IMAGE_PROVIDER_GOD_TIBO) {
     return generateGodTiboImage({ prompt, model: model || DEFAULT_GOD_TIBO_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO });
   }
@@ -290,7 +280,7 @@ export async function generateImageNativeSlides({
   slidesDir = 'slides',
   templatePack = null,
   templatePackPath = '',
-  provider = IMAGE_NATIVE_PROVIDER_DRY_RUN,
+  provider = IMAGE_PROVIDER_GOD_TIBO,
   model = '',
   baseUrl = '',
   env = process.env,
@@ -308,7 +298,7 @@ export async function generateImageNativeSlides({
   const slides = parseImageNativeOutline(outlineMarkdown);
   const pack = await resolveTemplatePack({ slidesDir: absoluteSlidesDir, templatePack, templatePackPath });
   const normalizedProvider = normalizeProvider(provider);
-  const resolvedModel = model || (normalizedProvider === IMAGE_NATIVE_PROVIDER_DRY_RUN ? DEFAULT_DRY_RUN_MODEL : '');
+  const resolvedModel = model || '';
   const generatedSlides = [];
 
   for (const slide of slides) {
@@ -414,7 +404,7 @@ export async function regenerateImageNativeSlide({
   slideFile,
   prompt,
   selections = [],
-  provider = IMAGE_NATIVE_PROVIDER_DRY_RUN,
+  provider = IMAGE_PROVIDER_GOD_TIBO,
   model = '',
   baseUrl = '',
   env = process.env,
@@ -432,8 +422,8 @@ export async function regenerateImageNativeSlide({
   const metadataRef = ensureImageNativeHtml(html, slideFile);
   const metadataPath = join(absoluteSlidesDir, metadataRef);
   const metadata = JSON.parse(await readFile(metadataPath, 'utf8'));
-  const normalizedProvider = normalizeProvider(provider || metadata.provider || IMAGE_NATIVE_PROVIDER_DRY_RUN);
-  const resolvedModel = model || metadata.model || (normalizedProvider === IMAGE_NATIVE_PROVIDER_DRY_RUN ? DEFAULT_DRY_RUN_MODEL : '');
+  const normalizedProvider = normalizeProvider(provider || metadata.provider || IMAGE_PROVIDER_GOD_TIBO);
+  const resolvedModel = model || metadata.model || '';
   const regenerationPrompt = buildRegenerationPrompt({ metadata, prompt: prompt.trim(), selections });
   throwIfImageRegenerationAborted(signal);
 
