@@ -35,7 +35,7 @@ export const state = {
   defaultModel: DEFAULT_MODELS[0],
   selectedModel: DEFAULT_MODELS[0],
   toolMode: TOOL_MODE_DRAW,
-  editorType: 'html',
+  editorType: typeof document !== 'undefined' && document.body?.dataset.editorType === 'image' ? 'image' : 'html',
   imageProvider: 'dry-run',
   hoveredObjectXPath: '',
 };

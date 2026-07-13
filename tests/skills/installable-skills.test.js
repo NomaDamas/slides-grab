@@ -210,6 +210,7 @@ test('installable presentation skills document disjoint HTML and image-native ed
   assert.match(htmlSkill, /slides-grab\s+edit\s+--slides-dir/);
   assert.doesNotMatch(htmlSkill, /edit-image/);
   assert.match(imageSkill, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.match(imageSkill, /slides-grab\s+image\s+--image-native\s+--name\s+slide-XX/);
   assert.doesNotMatch(imageSkill, /Image Regenerate/);
   assert.match(designSkill, /slides-grab\s+edit\s+--slides-dir/);
   assert.match(designSkill, /slides-grab\s+edit-image\s+--slides-dir/);

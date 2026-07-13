@@ -320,6 +320,7 @@ program
   .option('--slides-dir <path>', 'Slide directory', 'slides')
   .option('--output <path>', 'Optional output path inside <slides-dir>/assets/')
   .option('--name <slug>', 'Optional asset basename without extension')
+  .option('--image-native', 'Also create an editor-compatible slide-XX.html wrapper and regeneration metadata; requires --name slide-XX')
   .option('--provider <name>', 'Image provider: god-tibo (default), codex (OpenAI), or nano-banana. Aliases: codex-cli → god-tibo, openai → codex, gemini → nano-banana')
   .option('--model <id>', 'Model id (default: gpt-5.4 for god-tibo, gpt-image-2 for codex, gemini-3-pro-image-preview for nano-banana)')
   .option('--aspect-ratio <ratio>', 'Aspect ratio; for god-tibo it is injected as a prompt hint, for codex it maps to the nearest supported OpenAI size (default: 16:9)')
@@ -342,6 +343,7 @@ program
     if (options.prompt) args.push('--prompt', String(options.prompt));
     if (options.output) args.push('--output', String(options.output));
     if (options.name) args.push('--name', String(options.name));
+    if (options.imageNative) args.push('--image-native');
     if (options.provider) args.push('--provider', String(options.provider));
     if (options.model) args.push('--model', String(options.model));
     if (options.aspectRatio) args.push('--aspect-ratio', String(options.aspectRatio));

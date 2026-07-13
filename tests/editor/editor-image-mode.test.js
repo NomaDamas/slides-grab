@@ -163,7 +163,7 @@ test('/api/slides/:file/save is unavailable in image editor and leaves slide HTM
     });
     const body = await res.json().catch(() => ({}));
 
-    assert.ok([400, 405].includes(res.status), `expected direct save rejection, got ${res.status}: ${JSON.stringify(body)}`);
+    assert.equal(res.status, 405, `expected direct save rejection, got ${res.status}: ${JSON.stringify(body)}`);
     assert.equal(await readFile(slidePath, 'utf8'), beforeHtml);
   } finally {
     await stopChild(server.child);
@@ -231,7 +231,8 @@ test('/api/apply image mode uses active-run conflict and cancellation plumbing',
     const cancel = await fetch(`http://localhost:${port}/api/runs/${runId}/cancel`, { method: 'POST' });
     assert.equal(cancel.status, 200);
     const firstBody = await first.then((res) => res.json().catch(() => ({}))).catch((error) => ({ error: error.message }));
-    assert.match(JSON.stringify(firstBody), /aborted|Image regeneration was aborted|success/);
+    assert.equal(firstBody.success, false);
+    assert.equal(firstBody.aborted, true);
   } finally {
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });

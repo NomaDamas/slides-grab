@@ -44,6 +44,7 @@ import {
   injectAspectRatioHint,
   resolveGodTiboConfig,
 } from '../src/god-tibo-imagen.js';
+import { writeImageNativeSlideWrapper } from '../src/image-native.js';
 
 export {
   DEFAULT_CODEX_IMAGE_BASE_URL,
@@ -86,7 +87,23 @@ export {
 };
 
 export async function main(argv = process.argv.slice(2), options = {}) {
-  return runNanoBananaCli(argv, options);
+  const imageNative = argv.includes('--image-native');
+  const forwardedArgs = argv.filter((arg) => arg !== '--image-native');
+  const parsed = parseNanoBananaCliArgs(forwardedArgs);
+  const target = await runNanoBananaCli(forwardedArgs, options);
+  if (!imageNative || parsed.help || !target) return target;
+
+  const wrapper = await writeImageNativeSlideWrapper({
+    slidesDir: parsed.slidesDir,
+    slideName: parsed.name,
+    assetRef: target.relativeRef,
+    prompt: parsed.prompt,
+    provider: target.provider,
+    model: target.model,
+    title: parsed.name,
+  });
+  (options.stdout || process.stdout).write(`Created image-native slide wrapper: ${wrapper.slideFile}\n`);
+  return { ...target, imageNative: wrapper };
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

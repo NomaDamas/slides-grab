@@ -200,6 +200,55 @@ function buildWrapperHtml({ title, assetRef, metadataRef }) {
 `;
 }
 
+export async function writeImageNativeSlideWrapper({
+  slidesDir,
+  slideName,
+  assetRef,
+  prompt,
+  provider,
+  model,
+  title = '',
+} = {}) {
+  const normalizedSlideName = String(slideName || '').trim().replace(/\.html$/i, '');
+  if (!/^slide-\d{2}$/.test(normalizedSlideName)) {
+    throw new Error('--image-native requires --name in slide-XX format.');
+  }
+  if (typeof assetRef !== 'string' || !assetRef.startsWith('./assets/')) {
+    throw new Error('Image-native assets must use a ./assets/ reference.');
+  }
+  if (typeof prompt !== 'string' || prompt.trim() === '') {
+    throw new Error('Image-native slide metadata requires the generation prompt.');
+  }
+
+  const absoluteSlidesDir = resolve(slidesDir || 'slides');
+  const metadataDir = join(absoluteSlidesDir, IMAGE_NATIVE_METADATA_DIR);
+  const slideFile = `${normalizedSlideName}.html`;
+  const metadataFile = `${normalizedSlideName}.json`;
+  const metadataRef = `${IMAGE_NATIVE_METADATA_DIR}/${metadataFile}`;
+  const normalizedProvider = normalizeProvider(provider);
+  await mkdir(metadataDir, { recursive: true });
+  await writeFile(
+    join(absoluteSlidesDir, slideFile),
+    buildWrapperHtml({ title: title || normalizedSlideName, assetRef, metadataRef }),
+    'utf8',
+  );
+
+  const metadata = {
+    schemaVersion: 1,
+    mode: 'image-native',
+    slideFile,
+    assetRef,
+    prompt: prompt.trim(),
+    provider: normalizedProvider,
+    model: String(model || '').trim(),
+    templateLayoutId: null,
+    templateLayoutKind: null,
+    regenerationHistory: [],
+  };
+  await writeFile(join(metadataDir, metadataFile), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
+  return { slideFile, metadataFile: metadataRef, metadata };
+}
+
 async function defaultGenerateImage({ prompt, provider, model, env = process.env, baseUrl = '', fetchImpl = globalThis.fetch }) {
   if (provider === IMAGE_NATIVE_PROVIDER_DRY_RUN) {
     return { mimeType: 'image/png', bytes: PNG_PLACEHOLDER };
@@ -329,7 +378,7 @@ function extractImageNativeMetadataRef(html) {
 
 function ensureImageNativeHtml(html, slideFile) {
   if (!/<meta\s+name=["']slides-grab-image-native["']\s+content=["']true["']/i.test(html)) {
-    throw new Error(`${slideFile} is not an image-native slide. Generate it with slides-grab image or open HTML slides with slides-grab edit.`);
+    throw new Error(`${slideFile} is not an image-native slide. Generate it with slides-grab image --image-native --name slide-XX or open HTML slides with slides-grab edit.`);
   }
   const metadataRef = extractImageNativeMetadataRef(html);
   if (!metadataRef) {

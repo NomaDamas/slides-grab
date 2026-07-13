@@ -173,6 +173,36 @@ test('image editor configures the image-only surface before slides load', { conc
   }
 });
 
+test('image editor remains image-only when /api/config fails', { concurrency: false }, async () => {
+  const workspace = await createImageWorkspace();
+  const port = await getAvailablePort();
+  const server = spawnEditorServer(workspace, port, 'image');
+  let browser;
+
+  try {
+    await waitForServerReady(port, server.child, server.output);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    await page.route('**/api/config', (route) => route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'injected config failure' }),
+    }));
+    await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => /1\s*\/\s*1/.test(document.querySelector('#slide-counter')?.textContent || ''));
+
+    assert.equal(await page.locator('body').getAttribute('data-editor-type'), 'image');
+    assert.equal(await page.title(), 'Image Editor - slides-grab');
+    assert.equal(await page.locator('#tool-mode-select').isVisible(), false);
+    assert.equal(await page.locator('#model-section').isVisible(), false);
+    assert.equal(await page.locator('#image-provider-section').isVisible(), true);
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+    await stopChild(server.child);
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
 test('image editor sends provider-only image payloads with empty XPath targets', { concurrency: false }, async () => {
   const workspace = await createImageWorkspace();
   const port = await getAvailablePort();

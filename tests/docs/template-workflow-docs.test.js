@@ -40,6 +40,7 @@ test('skill references describe imported template packs and separate editor comm
   assert.match(htmlSkill, /slides-grab\s+edit\s+--slides-dir/);
   assert.doesNotMatch(htmlSkill, /edit-image/);
   assert.match(imageSkill, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.match(imageSkill, /slides-grab\s+image\s+--image-native\s+--name\s+slide-XX/);
   assert.doesNotMatch(imageSkill, /Image Regenerate/);
   assert.match(designSkill, /slides-grab\s+edit\s+--slides-dir/);
   assert.match(designSkill, /slides-grab\s+edit-image\s+--slides-dir/);
@@ -48,6 +49,7 @@ test('skill references describe imported template packs and separate editor comm
   assert.match(workflowReference, /import-template/);
   assert.match(workflowReference, /slides-grab\s+edit\s+--slides-dir/);
   assert.match(workflowReference, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.match(workflowReference, /slides-grab\s+image\s+--image-native\s+--name\s+slide-XX/);
   assert.doesNotMatch(workflowReference, /Image Regenerate/);
 });
 

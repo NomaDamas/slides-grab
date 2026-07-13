@@ -53,14 +53,9 @@ Use the installed **slides-grab-plan** skill with image-native outline density r
    - `--reference` pointing to the matching template page render(s)
    - `--reference` for any real photos to embed (member photos, product shots, logos)
    - `--slides-dir <path>` and `--name slide-XX` (so the output is `assets/slide-XX.png`)
+   - `--image-native` so the command also writes the editor-compatible `slide-XX.html` wrapper and `.slides-grab/image-native/slide-XX.json` regeneration metadata
    - `--provider god-tibo` (default; reuses `~/.codex/auth.json`, run `codex login` once, no API key). Alternatives: `--provider codex` (OPENAI_API_KEY), `--provider nano-banana` (GOOGLE_API_KEY/GEMINI_API_KEY).
-3. After each PNG is generated, write a minimal wrapper `slide-XX.html`:
-   ```html
-   <!DOCTYPE html>
-   <html><head><meta charset="UTF-8"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"></head>
-   <body style="margin:0"><img src="./assets/slide-XX.png" style="width:100%;height:auto;display:block"></body>
-   </html>
-   ```
+3. Confirm each command reports `Created image-native slide wrapper: slide-XX.html`. Do not hand-write the wrapper; `--image-native` keeps the PNG, wrapper, and regeneration metadata contract aligned for `slides-grab edit-image`.
 4. Run `slides-grab validate --slides-dir <path>`. Auto-fix failures until it passes.
 5. Run the design gate (`../slides-grab-design/references/design-gate.md`): capture PNG evidence, run Pass A + Pass B, synthesize verdict. Resolve all Critical findings, re-generate the failing slide, re-render, re-review until `Proceed`. Record with `slides-grab design-gate --slides-dir <path> --verdict proceed --pass-a-report <a.md> --pass-b-report <b.md>`.
 6. For revisions, regenerate the specific slide with `slides-grab image` (same `--reference`, adjusted `--prompt`), or launch the image-native editor with `slides-grab edit-image --slides-dir <path>`.
@@ -75,7 +70,7 @@ Use the installed **slides-grab-export** skill. Requires a fresh `Proceed` gate 
 - Keep slide size 720pt × 405pt (16:9).
 - **Always pass `--reference` template page images** — never generate image-native slides from a text-only prompt. The reference defines the visual design; the prompt defines the content.
 - Generate one slide at a time with `slides-grab image`. Do not use `slides-grab generate-images`.
-- Wrapper `slide-XX.html` only displays `./assets/slide-XX.png` — do not hand-write semantic text into wrapper slides.
+- `slides-grab image --image-native --name slide-XX` writes the wrapper and regeneration metadata. Do not hand-write semantic text into wrapper slides.
 - Put generated assets under `<slides-dir>/assets/`, reference as `./assets/<file>`.
 - Allow `data:` URLs when a slide must be self-contained; never leave remote `http(s)://` image URLs in saved HTML.
 - Do not present slides for review until `slides-grab validate` passes.

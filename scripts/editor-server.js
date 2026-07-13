@@ -102,6 +102,32 @@ function printUsage() {
   process.stdout.write(`  -h, --help                Show this help message\n`);
 }
 
+const EDITOR_PAGE_COPY = Object.freeze({
+  html: Object.freeze({
+    title: 'HTML Editor - slides-grab',
+    brand: 'HTML Editor',
+    sendLabel: 'Run HTML Edit',
+    hint: 'HTML Editor: drag on the slide to add red bboxes. Cmd/Ctrl+Enter to run.',
+  }),
+  image: Object.freeze({
+    title: 'Image Editor - slides-grab',
+    brand: 'Image Editor',
+    sendLabel: 'Regenerate Image',
+    hint: 'Image Editor: drag on the slide to add red bboxes for regeneration.',
+  }),
+});
+
+function renderEditorPage(html, editorType) {
+  const type = editorType === 'image' ? 'image' : 'html';
+  const copy = EDITOR_PAGE_COPY[type];
+  return html
+    .replaceAll('__SLIDES_GRAB_EDITOR_TYPE__', type)
+    .replaceAll('__SLIDES_GRAB_EDITOR_TITLE__', copy.title)
+    .replaceAll('__SLIDES_GRAB_EDITOR_BRAND__', copy.brand)
+    .replaceAll('__SLIDES_GRAB_EDITOR_SEND_LABEL__', copy.sendLabel)
+    .replaceAll('__SLIDES_GRAB_EDITOR_HINT__', copy.hint);
+}
+
 function parseArgs(argv) {
   const opts = {
     port: DEFAULT_PORT,
@@ -623,7 +649,7 @@ async function startServer(opts) {
   app.get('/', async (_req, res) => {
     try {
       const html = await readFile(editorHtmlPath, 'utf-8');
-      res.type('html').send(html);
+      res.type('html').send(renderEditorPage(html, opts.editor));
     } catch (err) {
       res.status(500).send(`Failed to load editor: ${err.message}`);
     }
@@ -819,7 +845,7 @@ async function startServer(opts) {
       const slideHtml = await readFile(join(slidesDirectory, slide), 'utf8').catch(() => '');
       if (!isImageNativeSlideHtml(slideHtml)) {
         return res.status(400).json({
-          error: `${slide} is not an image-native slide. Generate it with slides-grab image or open HTML slides with slides-grab edit.`,
+          error: `${slide} is not an image-native slide. Generate it with slides-grab image --image-native --name slide-XX or open HTML slides with slides-grab edit.`,
         });
       }
     }
@@ -1022,6 +1048,7 @@ async function startServer(opts) {
 
       res.status(500).json({
         success: false,
+        aborted: abortedBySignal,
         runId,
         error: message,
       });

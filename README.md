@@ -130,14 +130,15 @@ slides-grab import-template \
 
 The import writes `<slides-dir>/.slides-grab/template-pack.json` plus preview assets. In Stage 1, record `style: template-pack` in `slide-outline.md`; in Stage 2, generate HTML slides that follow the template pack roles, bbox/schema limits, colors, fonts, and previewed layout families. Run `slides-grab validate --slides-dir <path>` and `slides-grab design-gate` before export.
 
-For image-first decks, image-native slides are generated per slide with `slides-grab image --reference <template-page.png> --slides-dir <path>`: each generated PNG is wrapped in a `slide-XX.html` that displays `./assets/<name>.png`. Use a deterministic `--provider dry-run` in tests or real providers in production, and reuse the imported `template-pack.json` page previews as `--reference` inputs for style/layout guidance:
+For image-first decks, generate each image-native slide with `slides-grab image --image-native --name slide-XX --reference <template-page.png> --slides-dir <path>`. The command writes the generated PNG, `slide-XX.html` wrapper, and regeneration metadata required by `slides-grab edit-image` together. Reuse imported template page preview PNGs as `--reference` inputs for style/layout guidance:
 
 ```bash
 slides-grab image \
+  --image-native \
+  --name slide-01 \
   --prompt "<whole-slide prompt>" \
   --slides-dir decks/acme-image \
-  --reference decks/acme-qbr/.slides-grab/template-pack.json \
-  --provider dry-run
+  --reference decks/acme-qbr/.slides-grab/template-previews/page-01.png
 ```
 
 Image-native slides are raster wrappers around generated PNG assets. They are useful for fast visual exploration or image-led concepts, but they are less editable than HTML: revise them with `slides-grab edit-image --slides-dir <path>`, not direct semantic HTML edits. Use HTML mode when the deck must remain highly editable, accessible, searchable, or easy to convert; use image-native mode when visual composition matters more than downstream editability.

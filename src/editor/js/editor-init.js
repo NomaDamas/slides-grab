@@ -339,15 +339,20 @@ function applySlideFrameCss(width, height) {
 }
 
 async function loadEditorConfig() {
+  const serverAuthoredType = state.editorType;
+  configureEditorClient(serverAuthoredType);
   let cfg = {};
   try {
     const res = await fetch('/api/config');
-    if (res.ok) cfg = await res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    cfg = await res.json();
+    if (cfg?.editorType !== serverAuthoredType) {
+      throw new Error(`Editor type mismatch: page=${serverAuthoredType}, config=${cfg?.editorType || 'missing'}`);
+    }
   } catch {
-    // Defaults (960x540) stay in effect.
+    // Keep the server-authored editor type and default frame dimensions.
   }
 
-  configureEditorClient(cfg?.editorType);
   const w = cfg?.framePx?.width;
   const h = cfg?.framePx?.height;
   if (w && h) {

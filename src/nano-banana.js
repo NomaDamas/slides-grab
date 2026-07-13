@@ -668,14 +668,24 @@ async function generateNanoBananaFallbackImage({ options, apiKey, fetchImpl }) {
   });
 }
 
+function resolveGodTiboModel(options) {
+  return options.model && options.model.trim() ? options.model : DEFAULT_GOD_TIBO_MODEL;
+}
+
 async function generateGodTiboFallbackImage({ options, generateGodTiboImageImpl }) {
   return generateGodTiboImageImpl({
     prompt: options.prompt,
-    model: options.model && options.model.trim() ? options.model : DEFAULT_GOD_TIBO_MODEL,
+    model: resolveGodTiboModel(options),
     aspectRatio: options.aspectRatio,
     providerMode: GOD_TIBO_PROVIDER_AUTO,
     referenceImages: options.referenceImages || [],
   });
+}
+
+function resolveCodexModel(options) {
+  return options.model && options.model.trim() && options.model !== DEFAULT_GOD_TIBO_MODEL
+    ? options.model
+    : DEFAULT_CODEX_IMAGE_MODEL;
 }
 
 async function generateCodexFallbackImage({ options, apiKey, fetchImpl, requestedNanoBananaImageSize, baseUrl }) {
@@ -687,9 +697,7 @@ async function generateCodexFallbackImage({ options, apiKey, fetchImpl, requeste
   return generateCodexImage({
     prompt: options.prompt,
     apiKey,
-    model: options.model && options.model.trim() && options.model !== DEFAULT_GOD_TIBO_MODEL
-      ? options.model
-      : DEFAULT_CODEX_IMAGE_MODEL,
+    model: resolveCodexModel(options),
     aspectRatio: options.aspectRatio,
     fetchImpl,
     baseUrl,
@@ -725,12 +733,14 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
 
   let generated;
   let providerUsed = options.provider;
+  let modelUsed = options.model;
   const requestedNanoBananaImageSize = argvIncludesOption(argv, '--image-size');
   const fallbackNotices = [];
 
   if (options.provider === IMAGE_PROVIDER_GOD_TIBO) {
     try {
       generated = await generateGodTiboFallbackImage({ options, generateGodTiboImageImpl });
+      modelUsed = resolveGodTiboModel(options);
     } catch (godTiboError) {
       const codexResolution = resolveCodexApiKey(env, { apiKeyEnv: options.apiKeyEnv });
       if (codexResolution.apiKey) {
@@ -744,6 +754,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
             baseUrl: resolveCodexBaseUrl({ baseUrl: options.baseUrl, env }).baseUrl,
           });
           providerUsed = IMAGE_PROVIDER_CODEX;
+          modelUsed = resolveCodexModel(options);
         } catch (codexError) {
           const nanoResolution = resolveNanoBananaApiKey(env);
           if (!nanoResolution.apiKey) {
@@ -752,6 +763,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
           fallbackNotices.push(`Codex/OpenAI fallback failed; falling back to Nano Banana.`);
           generated = await generateNanoBananaFallbackImage({ options, apiKey: nanoResolution.apiKey, fetchImpl });
           providerUsed = IMAGE_PROVIDER_NANO_BANANA;
+          modelUsed = DEFAULT_NANO_BANANA_MODEL;
         }
       } else {
         const nanoResolution = resolveNanoBananaApiKey(env);
@@ -761,6 +773,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
         fallbackNotices.push(`god-tibo failed (${godTiboError.message?.split('.')[0] || 'error'}); falling back to Nano Banana.`);
         generated = await generateNanoBananaFallbackImage({ options, apiKey: nanoResolution.apiKey, fetchImpl });
         providerUsed = IMAGE_PROVIDER_NANO_BANANA;
+        modelUsed = DEFAULT_NANO_BANANA_MODEL;
       }
     }
   } else if (options.provider === IMAGE_PROVIDER_CODEX) {
@@ -774,6 +787,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
           requestedNanoBananaImageSize,
           baseUrl: resolveCodexBaseUrl({ baseUrl: options.baseUrl, env }).baseUrl,
         });
+        modelUsed = resolveCodexModel(options);
       } catch (error) {
         const { apiKey: fallbackApiKey } = resolveNanoBananaApiKey(env);
         if (!fallbackApiKey) {
@@ -781,6 +795,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
         }
         providerUsed = IMAGE_PROVIDER_NANO_BANANA;
         generated = await generateNanoBananaFallbackImage({ options, apiKey: fallbackApiKey, fetchImpl });
+        modelUsed = DEFAULT_NANO_BANANA_MODEL;
       }
     } else {
       const { apiKey: fallbackApiKey } = resolveNanoBananaApiKey(env);
@@ -789,6 +804,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
       }
       providerUsed = IMAGE_PROVIDER_NANO_BANANA;
       generated = await generateNanoBananaFallbackImage({ options, apiKey: fallbackApiKey, fetchImpl });
+      modelUsed = DEFAULT_NANO_BANANA_MODEL;
     }
   } else {
     const { apiKey } = resolveNanoBananaApiKey(env);
@@ -804,6 +820,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
       imageSize: options.imageSize,
       fetchImpl,
     });
+    modelUsed = options.model;
   }
 
   const target = await saveNanoBananaImage({
@@ -822,5 +839,5 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
   stdout.write(`Saved generated image to ${target.outputPath}\n`);
   stdout.write(`Image provider: ${providerUsed}\n`);
   stdout.write(`Reference it from slide HTML as ${target.relativeRef}\n`);
-  return target;
+  return { ...target, provider: providerUsed, model: modelUsed };
 }

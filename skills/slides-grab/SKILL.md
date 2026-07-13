@@ -53,7 +53,7 @@ Use the installed **slides-grab-export** skill. Export is gated on a Stage 2 des
 4. **Use `decks/<deck-name>/`** as the slides workspace for multi-deck projects.
 5. **Call out export risk clearly**: PPTX and Figma export are experimental / unstable.
 6. For complex diagrams, default to a `tldraw`-generated asset unless the user explicitly asks for a different approach.
-7. When a slide needs bespoke imagery inside an HTML deck, prefer the default god-tibo-imagen provider via `slides-grab image` (reuses local Codex ChatGPT login — no API key required; run `codex login` once) and keep the saved asset local under `<slides-dir>/assets/`. Image-native decks instead use `slides-grab generate-images` for whole-slide rasters — see the image sub-skill.
+7. When a slide needs bespoke imagery inside an HTML deck, prefer the default god-tibo-imagen provider via `slides-grab image` (reuses local Codex ChatGPT login — no API key required; run `codex login` once) and keep the saved asset local under `<slides-dir>/assets/`. Image-native decks generate each whole-slide raster with `slides-grab image --image-native --name slide-XX` so the wrapper and editor metadata are created together — see the image sub-skill.
 8. When a slide needs a chart, default to Chart.js in-slide canvas rendering and require `slides-grab validate` plus `slides-grab build-viewer` review so blank canvases are caught as `empty-canvas` before export. Local videos live under `<slides-dir>/assets/` with `poster="./assets/<file>"` thumbnails; use `slides-grab fetch-video` or `yt-dlp` to pull supported web videos first.
 9. Use `slides-grab list-styles` and `slides-grab preview-styles` for bundled style discovery during planning.
 

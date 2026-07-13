@@ -120,14 +120,15 @@ slides-grab import-template \
 
 이 명령은 `<slides-dir>/.slides-grab/template-pack.json`과 미리보기 에셋을 씁니다. Stage 1에서는 `slide-outline.md`에 `style: template-pack`을 기록하고, Stage 2에서는 template pack의 역할, bbox/스키마 제한, 색상, 폰트, 미리보기 레이아웃 계열을 따라 HTML 슬라이드를 생성하세요. 내보내기 전에는 `slides-grab validate --slides-dir <path>`와 `slides-grab design-gate`를 실행합니다.
 
-이미지 중심 덱은 슬라이드별로 `slides-grab image --reference <template-page.png> --slides-dir <path>`로 이미지 네이티브 슬라이드를 생성합니다. 각 PNG는 `./assets/<name>.png`를 표시하는 `slide-XX.html`로 감싸세요. 테스트에서는 결정적인 `--provider dry-run`을 쓰거나 운영에서 실제 provider를 지정하고, 가져온 `template-pack.json` 페이지 미리보기를 `--reference` 입력으로 재사용해 스타일/레이아웃 가이드로 활용하세요:
+이미지 중심 덱은 슬라이드별로 `slides-grab image --image-native --name slide-XX --reference <template-page.png> --slides-dir <path>`를 실행하세요. 이 명령은 생성 PNG, `slide-XX.html` wrapper, `slides-grab edit-image`에 필요한 재생성 메타데이터를 함께 기록합니다. 가져온 템플릿 페이지 미리보기 PNG를 `--reference` 입력으로 재사용해 스타일/레이아웃 가이드로 활용하세요:
 
 ```bash
 slides-grab image \
+  --image-native \
+  --name slide-01 \
   --prompt "<whole-slide prompt>" \
   --slides-dir decks/acme-image \
-  --reference decks/acme-qbr/.slides-grab/template-pack.json \
-  --provider dry-run
+  --reference decks/acme-qbr/.slides-grab/template-previews/page-01.png
 ```
 
 이미지 네이티브 슬라이드는 래스터 wrapper이며 생성된 PNG 에셋을 감쌉니다. 빠른 시각 탐색이나 이미지 주도 콘셉트에는 유용하지만 HTML보다 편집 가능성이 낮습니다. 텍스트나 레이아웃을 바꾸려면 semantic HTML을 직접 수정하지 말고 `slides-grab edit-image --slides-dir <path>`를 사용하세요. 덱을 계속 쉽게 편집, 접근성 유지, 검색, 변환해야 한다면 HTML 모드를 쓰고, 시각적 구성이 후속 편집성보다 중요할 때 이미지 네이티브 모드를 쓰세요.
