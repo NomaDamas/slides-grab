@@ -29,7 +29,7 @@ import {
 } from '../src/editor/edit-subprocess.js';
 import { buildSlideRuntimeHtml } from '../src/image-contract.js';
 import { regenerateImageNativeSlide } from '../src/image-native.js';
-import { GOD_TIBO_DEFAULT_MODEL } from '../src/god-tibo-imagen.js';
+import { CODEX_DEFAULT_MODEL } from '../src/codex-imagen.js';
 
 const require = createRequire(import.meta.url);
 const {
@@ -828,7 +828,7 @@ async function startServer(opts) {
 
     let selectedModel;
     if (applyMode === 'image') {
-      selectedModel = typeof model === 'string' && model.trim() ? model.trim() : GOD_TIBO_DEFAULT_MODEL;
+      selectedModel = typeof model === 'string' && model.trim() ? model.trim() : CODEX_DEFAULT_MODEL;
     } else {
       try {
         selectedModel = normalizeModel(model);
@@ -906,7 +906,7 @@ async function startServer(opts) {
           prompt,
           selections: normalizedSelections,
           signal: abortController.signal,
-          provider: provider || 'god-tibo',
+          provider: provider || 'codex',
           model: selectedModel,
           baseUrl: typeof baseUrl === 'string' ? baseUrl : '',
           env: process.env,

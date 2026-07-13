@@ -4,30 +4,30 @@ import { basename, join, resolve } from 'node:path';
 import { loadTemplatePackFromSlidesDir, parseTemplatePack } from './template-pack.js';
 import { selectTemplateLayout } from './template-layout.js';
 import {
-  DEFAULT_CODEX_IMAGE_MODEL,
-  DEFAULT_GOD_TIBO_MODEL,
+  DEFAULT_OPENAI_IMAGE_MODEL,
+  DEFAULT_CODEX_MODEL,
   DEFAULT_NANO_BANANA_ASPECT_RATIO,
   DEFAULT_NANO_BANANA_MODEL,
+  IMAGE_PROVIDER_OPENAI,
   IMAGE_PROVIDER_CODEX,
-  IMAGE_PROVIDER_GOD_TIBO,
   IMAGE_PROVIDER_NANO_BANANA,
-  generateCodexImage,
+  generateOpenaiImage,
   generateNanoBananaImage,
-  resolveCodexApiKey,
-  resolveCodexBaseUrl,
+  resolveOpenaiApiKey,
+  resolveOpenaiBaseUrl,
   resolveNanoBananaApiKey,
 } from './nano-banana.js';
-import { generateGodTiboImage } from './god-tibo-imagen.js';
+import { generateCodexImage } from './codex-imagen.js';
 
 export const IMAGE_NATIVE_METADATA_DIR = '.slides-grab/image-native';
 
 function normalizeProvider(value) {
-  const provider = String(value || IMAGE_PROVIDER_GOD_TIBO).trim().toLowerCase();
-  if (!provider) return IMAGE_PROVIDER_GOD_TIBO;
-  if (provider === 'openai') return IMAGE_PROVIDER_CODEX;
+  const provider = String(value || IMAGE_PROVIDER_CODEX).trim().toLowerCase();
+  if (!provider) return IMAGE_PROVIDER_CODEX;
+  if (provider === 'openai') return IMAGE_PROVIDER_OPENAI;
   if (provider === 'gemini') return IMAGE_PROVIDER_NANO_BANANA;
-  if (provider === IMAGE_PROVIDER_CODEX || provider === IMAGE_PROVIDER_GOD_TIBO || provider === IMAGE_PROVIDER_NANO_BANANA) return provider;
-  throw new Error(`Unknown image-native provider: ${value}. Expected god-tibo, codex, or nano-banana.`);
+  if (provider === IMAGE_PROVIDER_OPENAI || provider === IMAGE_PROVIDER_CODEX || provider === IMAGE_PROVIDER_NANO_BANANA) return provider;
+  throw new Error(`Unknown image-native provider: ${value}. Expected codex, openai, or nano-banana.`);
 }
 
 function stripSlidePrefix(title) {
@@ -243,13 +243,13 @@ export async function writeImageNativeSlideWrapper({
 }
 
 async function defaultGenerateImage({ prompt, provider, model, env = process.env, baseUrl = '', fetchImpl = globalThis.fetch }) {
-  if (provider === IMAGE_PROVIDER_GOD_TIBO) {
-    return generateGodTiboImage({ prompt, model: model || DEFAULT_GOD_TIBO_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO });
-  }
   if (provider === IMAGE_PROVIDER_CODEX) {
-    const { apiKey } = resolveCodexApiKey(env);
-    if (!apiKey) throw new Error('Codex image-native generation requires OPENAI_API_KEY or OPENAI_IMAGE_API_KEY.');
-    return generateCodexImage({ prompt, apiKey, model: model || DEFAULT_CODEX_IMAGE_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO, baseUrl: resolveCodexBaseUrl({ baseUrl, env }).baseUrl, fetchImpl });
+    return generateCodexImage({ prompt, model: model || DEFAULT_CODEX_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO });
+  }
+  if (provider === IMAGE_PROVIDER_OPENAI) {
+    const { apiKey } = resolveOpenaiApiKey(env);
+    if (!apiKey) throw new Error('OpenAI image-native generation requires OPENAI_API_KEY or OPENAI_IMAGE_API_KEY.');
+    return generateOpenaiImage({ prompt, apiKey, model: model || DEFAULT_OPENAI_IMAGE_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO, baseUrl: resolveOpenaiBaseUrl({ baseUrl, env }).baseUrl, fetchImpl });
   }
   if (provider === IMAGE_PROVIDER_NANO_BANANA) {
     const { apiKey } = resolveNanoBananaApiKey(env);
@@ -280,7 +280,7 @@ export async function generateImageNativeSlides({
   slidesDir = 'slides',
   templatePack = null,
   templatePackPath = '',
-  provider = IMAGE_PROVIDER_GOD_TIBO,
+  provider = IMAGE_PROVIDER_CODEX,
   model = '',
   baseUrl = '',
   env = process.env,
@@ -326,7 +326,7 @@ export async function generateImageNativeSlides({
       assetRef,
       prompt,
       provider: normalizedProvider,
-      model: resolvedModel || (normalizedProvider === IMAGE_PROVIDER_CODEX ? DEFAULT_CODEX_IMAGE_MODEL : normalizedProvider === IMAGE_PROVIDER_GOD_TIBO ? DEFAULT_GOD_TIBO_MODEL : DEFAULT_NANO_BANANA_MODEL),
+      model: resolvedModel || (normalizedProvider === IMAGE_PROVIDER_OPENAI ? DEFAULT_OPENAI_IMAGE_MODEL : normalizedProvider === IMAGE_PROVIDER_CODEX ? DEFAULT_CODEX_MODEL : DEFAULT_NANO_BANANA_MODEL),
       templateLayoutId: selected.layoutId,
       templateLayoutKind: selected.layoutKind,
       sourceOutline: {
@@ -404,7 +404,7 @@ export async function regenerateImageNativeSlide({
   slideFile,
   prompt,
   selections = [],
-  provider = IMAGE_PROVIDER_GOD_TIBO,
+  provider = IMAGE_PROVIDER_CODEX,
   model = '',
   baseUrl = '',
   env = process.env,
@@ -422,7 +422,7 @@ export async function regenerateImageNativeSlide({
   const metadataRef = ensureImageNativeHtml(html, slideFile);
   const metadataPath = join(absoluteSlidesDir, metadataRef);
   const metadata = JSON.parse(await readFile(metadataPath, 'utf8'));
-  const normalizedProvider = normalizeProvider(provider || metadata.provider || IMAGE_PROVIDER_GOD_TIBO);
+  const normalizedProvider = normalizeProvider(provider || metadata.provider || IMAGE_PROVIDER_CODEX);
   const resolvedModel = model || metadata.model || '';
   const regenerationPrompt = buildRegenerationPrompt({ metadata, prompt: prompt.trim(), selections });
   throwIfImageRegenerationAborted(signal);

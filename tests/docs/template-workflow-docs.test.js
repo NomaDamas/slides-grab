@@ -69,13 +69,13 @@ test('template workflow fixtures cover HTML and image-native paths without exter
   assert.match(wrapperHtml, /\.\/assets\/slide-01\.png/);
 
   const metadata = JSON.parse(await readFixture('image-native-dry-run/.slides-grab/image-native/slide-01.json'));
-  assert.equal(metadata.provider, 'god-tibo');
+  assert.equal(metadata.provider, 'codex');
   assert.equal(metadata.model, 'gpt-5.4');
   assert.equal(metadata.assetRef, './assets/slide-01.png');
   assert.deepEqual(metadata.regenerationHistory, []);
 
   const mockProvider = JSON.parse(await readFixture('mock-image-provider-response.json'));
-  assert.equal(mockProvider.provider, 'god-tibo');
+  assert.equal(mockProvider.provider, 'codex');
   assert.ok(mockProvider.imageBase64.length > 20);
 
   assert.ok(existsSync(join(new URL('image-native-dry-run/assets/slide-01.png', fixtureRoot).pathname)));

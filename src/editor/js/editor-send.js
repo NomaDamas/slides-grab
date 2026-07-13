@@ -46,7 +46,7 @@ export function updateSendState() {
   const editorClient = getEditorClient();
   const model = editorClient.usesModel ? normalizeModelName(ss.model) : '';
 
-  state.imageProvider = imageProviderSelect?.value || 'god-tibo';
+  state.imageProvider = imageProviderSelect?.value || 'codex';
   btnSend.disabled = !prompt || pendingCount === 0 || blocked || (editorClient.usesModel && !model);
   btnClearBboxes.disabled = ss.boxes.length === 0 || blocked;
   updateSlideStatusChip();
@@ -65,7 +65,7 @@ export async function applyChanges() {
   const model = editorClient.usesModel
     ? normalizeModelName(ss.model) || state.selectedModel || state.defaultModel
     : '';
-  const imageProvider = imageProviderSelect?.value || 'god-tibo';
+  const imageProvider = imageProviderSelect?.value || 'codex';
   state.imageProvider = imageProvider;
   if (!prompt) return;
   if (pendingBoxes.length === 0) {

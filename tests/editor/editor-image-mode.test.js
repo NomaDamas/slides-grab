@@ -20,7 +20,7 @@ async function createImageNativeWorkspace() {
   const outlinePath = join(workspace, 'slide-outline.md');
   const slidesDir = join(workspace, 'slides');
   await writeFile(outlinePath, '# Demo\n\n## Slide 1: Hero\n- Fact: regenerate me\n', 'utf8');
-  await generateImageNativeSlides({ outlinePath, slidesDir, provider: 'god-tibo', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
+  await generateImageNativeSlides({ outlinePath, slidesDir, provider: 'codex', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
   return { workspace, slidesDir };
 }
 
@@ -85,7 +85,7 @@ function imageApplyBody(overrides = {}) {
     slide: 'slide-01.html',
     prompt: 'Regenerate the selected region with stronger hierarchy.',
     mode: 'image',
-    provider: 'god-tibo',
+    provider: 'codex',
     model: 'gpt-5.4',
     selections: [{ x: 96, y: 54, width: 320, height: 180, targets: [] }],
     ...overrides,
@@ -109,7 +109,7 @@ test('/api/apply image mode regenerates image-native slide metadata', async () =
     assert.equal(res.status, 200, JSON.stringify(body));
     assert.equal(body.success, true);
     assert.equal(body.mode, 'image');
-    assert.equal(body.image.provider, 'god-tibo');
+    assert.equal(body.image.provider, 'codex');
     assert.equal(body.image.regenerationHistoryLength, 1);
 
     const metadata = JSON.parse(await readFile(join(slidesDir, '.slides-grab', 'image-native', 'slide-01.json'), 'utf8'));
@@ -182,7 +182,7 @@ test('regenerateImageNativeSlide does not write metadata when aborted during pro
       slideFile: 'slide-01.html',
       prompt: 'This should abort before write.',
       selections: [{ bbox: { x: 1, y: 2, width: 3, height: 4 }, targets: [] }],
-      provider: 'god-tibo',
+      provider: 'codex',
       signal: controller.signal,
       generateImageImpl: async () => {
         await sleep(100);

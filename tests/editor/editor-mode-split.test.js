@@ -38,7 +38,7 @@ async function createImageNativeWorkspace() {
   const slidesDir = join(workspace, 'slides');
   const metadataPath = join(slidesDir, '.slides-grab', 'image-native', 'slide-01.json');
   await writeFile(outlinePath, '# Demo\n\n## Slide 1: Hero\n- Fact: regenerate me\n', 'utf8');
-  await generateImageNativeSlides({ outlinePath, slidesDir, provider: 'god-tibo', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
+  await generateImageNativeSlides({ outlinePath, slidesDir, provider: 'codex', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
   return {
     workspace,
     slidesDir,
@@ -295,7 +295,7 @@ test('image server accepts omitted and image body modes for image-native slides'
       const { response, body } = await postApply(port, applyBody({
         mode,
         model: 'gpt-5.4',
-        provider: 'god-tibo',
+        provider: 'codex',
       }));
 
       assert.equal(response.status, 200, JSON.stringify(body));
@@ -322,7 +322,7 @@ test('image server rejects non-image-native slides without file or metadata muta
     await waitForServerReady(port, server.child, server.output);
     const { response, body } = await postApply(port, applyBody({
       model: 'gpt-5.4',
-      provider: 'god-tibo',
+      provider: 'codex',
     }));
 
     assert.equal(response.status, 400, JSON.stringify(body));

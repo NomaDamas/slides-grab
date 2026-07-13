@@ -135,7 +135,7 @@ modelSelect.addEventListener('change', () => {
 });
 
 imageProviderSelect?.addEventListener('change', () => {
-  state.imageProvider = imageProviderSelect.value || 'god-tibo';
+  state.imageProvider = imageProviderSelect.value || 'codex';
   updateSendState();
   setStatus(`Image provider selected: ${state.imageProvider}`);
 });

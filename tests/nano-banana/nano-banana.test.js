@@ -5,44 +5,44 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
-  DEFAULT_CODEX_IMAGE_MODEL,
-  DEFAULT_GOD_TIBO_MODEL,
+  DEFAULT_OPENAI_IMAGE_MODEL,
+  DEFAULT_CODEX_MODEL,
   DEFAULT_IMAGE_PROVIDER,
   DEFAULT_NANO_BANANA_ASPECT_RATIO,
   DEFAULT_NANO_BANANA_IMAGE_SIZE,
   DEFAULT_NANO_BANANA_MODEL,
+  IMAGE_PROVIDER_OPENAI,
   IMAGE_PROVIDER_CODEX,
-  IMAGE_PROVIDER_GOD_TIBO,
   IMAGE_PROVIDER_NANO_BANANA,
-  buildCodexImageApiRequest,
-  buildCodexImageEndpoint,
+  buildOpenaiImageApiRequest,
+  buildOpenaiImageEndpoint,
   buildNanoBananaApiRequest,
   extractGeneratedImage,
-  getCodexFallbackMessage,
+  getOpenaiFallbackMessage,
   getNanoBananaFallbackMessage,
   normalizeImageProvider,
   parseNanoBananaCliArgs,
-  resolveCodexApiKey,
-  resolveCodexBaseUrl,
+  resolveOpenaiApiKey,
+  resolveOpenaiBaseUrl,
   resolveNanoBananaApiKey,
   resolveNanoBananaOutputPath,
 } from '../../src/nano-banana.js';
 import { main, runNanoBananaCli } from '../../scripts/generate-image.js';
 import { regenerateImageNativeSlide } from '../../src/image-native.js';
 
-test('default image provider is god-tibo', () => {
-  assert.equal(DEFAULT_IMAGE_PROVIDER, IMAGE_PROVIDER_GOD_TIBO);
-  assert.equal(DEFAULT_GOD_TIBO_MODEL, 'gpt-5.4');
+test('default image provider is codex', () => {
+  assert.equal(DEFAULT_IMAGE_PROVIDER, IMAGE_PROVIDER_CODEX);
+  assert.equal(DEFAULT_CODEX_MODEL, 'gpt-5.4');
 });
 
-test('parseNanoBananaCliArgs applies god-tibo image generation defaults', () => {
+test('parseNanoBananaCliArgs applies codex image generation defaults', () => {
   assert.deepEqual(parseNanoBananaCliArgs(['--prompt', 'Foggy mountain road at sunrise']), {
     prompt: 'Foggy mountain road at sunrise',
     slidesDir: 'slides',
     output: '',
     name: '',
     provider: DEFAULT_IMAGE_PROVIDER,
-    model: DEFAULT_GOD_TIBO_MODEL,
+    model: DEFAULT_CODEX_MODEL,
     aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO,
     imageSize: DEFAULT_NANO_BANANA_IMAGE_SIZE,
     baseUrl: '',
@@ -53,40 +53,39 @@ test('parseNanoBananaCliArgs applies god-tibo image generation defaults', () => 
 });
 
 test('normalizeImageProvider maps aliases to canonical providers', () => {
-  assert.equal(normalizeImageProvider('god-tibo'), IMAGE_PROVIDER_GOD_TIBO);
-  assert.equal(normalizeImageProvider('GodTibo'), IMAGE_PROVIDER_GOD_TIBO);
-  assert.equal(normalizeImageProvider('codex-cli'), IMAGE_PROVIDER_GOD_TIBO);
   assert.equal(normalizeImageProvider('codex'), IMAGE_PROVIDER_CODEX);
-  assert.equal(normalizeImageProvider('OpenAI'), IMAGE_PROVIDER_CODEX);
+  assert.equal(normalizeImageProvider('codex-cli'), IMAGE_PROVIDER_CODEX);
+  assert.equal(normalizeImageProvider('openai'), IMAGE_PROVIDER_OPENAI);
+  assert.equal(normalizeImageProvider('OpenAI'), IMAGE_PROVIDER_OPENAI);
   assert.equal(normalizeImageProvider('nano-banana'), IMAGE_PROVIDER_NANO_BANANA);
   assert.equal(normalizeImageProvider('gemini'), IMAGE_PROVIDER_NANO_BANANA);
 });
 
-test('parseNanoBananaCliArgs accepts codex-cli alias and resolves to god-tibo', () => {
+test('parseNanoBananaCliArgs accepts codex-cli alias and resolves to codex', () => {
   const parsed = parseNanoBananaCliArgs(['--prompt', 'tiny test', '--provider', 'codex-cli']);
-  assert.equal(parsed.provider, IMAGE_PROVIDER_GOD_TIBO);
-  assert.equal(parsed.model, DEFAULT_GOD_TIBO_MODEL);
+  assert.equal(parsed.provider, IMAGE_PROVIDER_CODEX);
+  assert.equal(parsed.model, DEFAULT_CODEX_MODEL);
 });
 
 test('parseNanoBananaCliArgs accepts openai alias and resolves to codex', () => {
   const parsed = parseNanoBananaCliArgs(['--prompt', 'tiny test', '--provider', 'openai']);
-  assert.equal(parsed.provider, IMAGE_PROVIDER_CODEX);
-  assert.equal(parsed.model, DEFAULT_CODEX_IMAGE_MODEL);
+  assert.equal(parsed.provider, IMAGE_PROVIDER_OPENAI);
+  assert.equal(parsed.model, DEFAULT_OPENAI_IMAGE_MODEL);
 });
 
-test('parseNanoBananaCliArgs accepts Codex-compatible endpoint options', () => {
+test('parseNanoBananaCliArgs accepts OpenAI-compatible endpoint options', () => {
   const parsed = parseNanoBananaCliArgs([
     '--prompt', 'tiny test',
-    '--provider', 'codex',
+    '--provider', 'openai',
     '--base-url', 'https://gateway.example/openai/v1',
     '--api-key-env', 'COMPAT_IMAGE_KEY',
   ]);
 
-  assert.equal(parsed.provider, IMAGE_PROVIDER_CODEX);
+  assert.equal(parsed.provider, IMAGE_PROVIDER_OPENAI);
   assert.equal(parsed.baseUrl, 'https://gateway.example/openai/v1');
   assert.equal(parsed.apiKeyEnv, 'COMPAT_IMAGE_KEY');
   assert.throws(
-    () => parseNanoBananaCliArgs(['--prompt', 'tiny test', '--provider', 'codex', '--api-key-env', 'NOT-A-NAME']),
+    () => parseNanoBananaCliArgs(['--prompt', 'tiny test', '--provider', 'openai', '--api-key-env', 'NOT-A-NAME']),
     /--api-key-env/i,
   );
 });
@@ -131,11 +130,11 @@ test('parseNanoBananaCliArgs reads explicit options and rejects invalid values',
   assert.throws(() => parseNanoBananaCliArgs(['--prompt', 'x', '--provider', 'banana']), /unknown --provider/i);
 });
 
-test('main routes to god-tibo by default and writes the generated bytes into slides/assets', async () => {
+test('main routes to codex by default and writes the generated bytes into slides/assets', async () => {
   const { mkdtemp, readFile, rm } = await import('node:fs/promises');
   const os = await import('node:os');
   const path = await import('node:path');
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'godtibo-default-test-'));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-default-test-'));
   const calls = [];
   const output = [];
 
@@ -145,14 +144,14 @@ test('main routes to god-tibo by default and writes the generated bytes into sli
       {
         env: {},
         fetchImpl: async () => {
-          throw new Error('fetch must not be called when god-tibo runs successfully');
+          throw new Error('fetch must not be called when codex runs successfully');
         },
         stdout: { write(chunk) { output.push(String(chunk)); } },
-        generateGodTiboImageImpl: async (args) => {
+        generateCodexImageImpl: async (args) => {
           calls.push(args);
           return {
             mimeType: 'image/png',
-            bytes: Buffer.from('god-tibo-bytes'),
+            bytes: Buffer.from('codex-bytes'),
             mode: 'live',
             warnings: [],
             revisedPrompt: null,
@@ -164,21 +163,21 @@ test('main routes to god-tibo by default and writes the generated bytes into sli
     assert.equal(calls.length, 1);
     assert.equal(calls[0].prompt, 'Studio portrait of a founder with warm rim light');
     assert.equal(calls[0].aspectRatio, '1:1');
-    assert.equal(calls[0].model, DEFAULT_GOD_TIBO_MODEL);
-    assert.equal(result.model, DEFAULT_GOD_TIBO_MODEL);
+    assert.equal(calls[0].model, DEFAULT_CODEX_MODEL);
+    assert.equal(result.model, DEFAULT_CODEX_MODEL);
 
-    const written = await readFile(path.join(workspace, 'assets', 'god-tibo-studio-portrait-of-a-founder-with-warm-rim-light.png'));
-    assert.equal(written.toString(), 'god-tibo-bytes');
-    assert.match(output.join(''), /Image provider: god-tibo/);
-    assert.match(output.join(''), /\.\/assets\/god-tibo-studio-portrait-of-a-founder-with-warm-rim-light\.png/);
+    const written = await readFile(path.join(workspace, 'assets', 'codex-studio-portrait-of-a-founder-with-warm-rim-light.png'));
+    assert.equal(written.toString(), 'codex-bytes');
+    assert.match(output.join(''), /Image provider: codex/);
+    assert.match(output.join(''), /\.\/assets\/codex-studio-portrait-of-a-founder-with-warm-rim-light\.png/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
 });
 
-test('runNanoBananaCli returns the model used by a Codex fallback from a custom god-tibo request', async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'godtibo-custom-model-fallback-'));
-  const requestedModel = 'custom-god-tibo-model';
+test('runNanoBananaCli returns the model used by a Codex fallback from a custom codex request', async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-custom-model-fallback-'));
+  const requestedModel = 'custom-codex-model';
   const fetchCalls = [];
 
   try {
@@ -201,14 +200,14 @@ test('runNanoBananaCli returns the model used by a Codex fallback from a custom 
           };
         },
         stdout: { write() {} },
-        generateGodTiboImageImpl: async () => {
-          throw new Error('god-tibo offline.');
+        generateCodexImageImpl: async () => {
+          throw new Error('codex offline.');
         },
       },
     );
 
     assert.equal(JSON.parse(fetchCalls[0].init.body).model, requestedModel);
-    assert.equal(result.provider, IMAGE_PROVIDER_CODEX);
+    assert.equal(result.provider, IMAGE_PROVIDER_OPENAI);
     assert.equal(result.model, requestedModel);
   } finally {
     await rm(workspace, { recursive: true, force: true });
@@ -230,7 +229,7 @@ test('image --image-native writes an editor-compatible wrapper and regeneration 
       {
         env: {},
         stdout: { write(chunk) { output.push(String(chunk)); } },
-        generateGodTiboImageImpl: async () => ({
+        generateCodexImageImpl: async () => ({
           mimeType: 'image/png',
           bytes: Buffer.from('image-native-bytes'),
           mode: 'live',
@@ -255,7 +254,7 @@ test('image --image-native writes an editor-compatible wrapper and regeneration 
       slidesDir: workspace,
       slideFile: 'slide-01.html',
       prompt: 'Increase title contrast.',
-      provider: 'god-tibo',
+      provider: 'codex',
       selections: [{ bbox: { x: 10, y: 20, width: 100, height: 80 }, targets: [] }],
       generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('regenerated-bytes') }),
     });
@@ -265,11 +264,11 @@ test('image --image-native writes an editor-compatible wrapper and regeneration 
   }
 });
 
-test('main falls back to codex/openai when god-tibo throws and OPENAI_API_KEY is set', async () => {
+test('main falls back to codex/openai when codex throws and OPENAI_API_KEY is set', async () => {
   const { mkdtemp, readFile, rm } = await import('node:fs/promises');
   const os = await import('node:os');
   const path = await import('node:path');
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'godtibo-codex-fallback-'));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-openai-fallback-'));
   const fetchCalls = [];
   const output = [];
 
@@ -289,7 +288,7 @@ test('main falls back to codex/openai when god-tibo throws and OPENAI_API_KEY is
           };
         },
         stdout: { write(chunk) { output.push(String(chunk)); } },
-        generateGodTiboImageImpl: async () => {
+        generateCodexImageImpl: async () => {
           const err = new Error('Unauthorized from private Codex backend.');
           err.code = 'UNAUTHORIZED';
           throw err;
@@ -301,20 +300,20 @@ test('main falls back to codex/openai when god-tibo throws and OPENAI_API_KEY is
     assert.equal(fetchCalls[0].url, 'https://api.openai.com/v1/images/generations');
     assert.equal(fetchCalls[0].init.headers.Authorization, 'Bearer sk-test');
 
-    const written = await readFile(path.join(workspace, 'assets', 'codex-a-floating-product-render.png'));
+    const written = await readFile(path.join(workspace, 'assets', 'openai-a-floating-product-render.png'));
     assert.equal(written.toString(), 'codex-fallback-bytes');
-    assert.match(output.join(''), /Fallback: god-tibo failed/);
-    assert.match(output.join(''), /Image provider: codex/);
+    assert.match(output.join(''), /Fallback: codex failed/);
+    assert.match(output.join(''), /Image provider: openai/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
 });
 
-test('main falls back to nano-banana when god-tibo fails and only GOOGLE_API_KEY is set', async () => {
+test('main falls back to nano-banana when codex fails and only GOOGLE_API_KEY is set', async () => {
   const { mkdtemp, readFile, rm } = await import('node:fs/promises');
   const os = await import('node:os');
   const path = await import('node:path');
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'godtibo-nano-fallback-'));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-nano-fallback-'));
   const fetchCalls = [];
   const output = [];
 
@@ -349,8 +348,8 @@ test('main falls back to nano-banana when god-tibo fails and only GOOGLE_API_KEY
           };
         },
         stdout: { write(chunk) { output.push(String(chunk)); } },
-        generateGodTiboImageImpl: async () => {
-          throw new Error('Boom from god-tibo.');
+        generateCodexImageImpl: async () => {
+          throw new Error('Boom from codex.');
         },
       },
     );
@@ -365,7 +364,7 @@ test('main falls back to nano-banana when god-tibo fails and only GOOGLE_API_KEY
   }
 });
 
-test('main throws an actionable god-tibo fallback error when no fallback credentials are configured', async () => {
+test('main throws an actionable codex fallback error when no fallback credentials are configured', async () => {
   await assert.rejects(
     () => runNanoBananaCli(
       ['--prompt', 'a tiny test'],
@@ -375,8 +374,8 @@ test('main throws an actionable god-tibo fallback error when no fallback credent
           throw new Error('fetch should not be called');
         },
         stdout: { write() {} },
-        generateGodTiboImageImpl: async () => {
-          throw new Error('god-tibo offline.');
+        generateCodexImageImpl: async () => {
+          throw new Error('codex offline.');
         },
       },
     ),
@@ -384,40 +383,40 @@ test('main throws an actionable god-tibo fallback error when no fallback credent
   );
 });
 
-test('resolveCodexApiKey reads OPENAI_API_KEY for the default provider', () => {
-  assert.deepEqual(resolveCodexApiKey({ OPENAI_API_KEY: 'openai-key' }), {
+test('resolveOpenaiApiKey reads OPENAI_API_KEY for the default provider', () => {
+  assert.deepEqual(resolveOpenaiApiKey({ OPENAI_API_KEY: 'openai-key' }), {
     apiKey: 'openai-key',
     source: 'OPENAI_API_KEY',
   });
-  assert.deepEqual(resolveCodexApiKey({ OPENAI_API_KEY: '  ' }), {
+  assert.deepEqual(resolveOpenaiApiKey({ OPENAI_API_KEY: '  ' }), {
     apiKey: '',
     source: '',
   });
 });
 
-test('resolveCodexApiKey supports compatible provider env precedence', () => {
-  assert.deepEqual(resolveCodexApiKey({ COMPAT_KEY: 'compat-key', OPENAI_API_KEY: 'openai-key' }, { apiKeyEnv: 'COMPAT_KEY' }), {
+test('resolveOpenaiApiKey supports compatible provider env precedence', () => {
+  assert.deepEqual(resolveOpenaiApiKey({ COMPAT_KEY: 'compat-key', OPENAI_API_KEY: 'openai-key' }, { apiKeyEnv: 'COMPAT_KEY' }), {
     apiKey: 'compat-key',
     source: 'COMPAT_KEY',
   });
-  assert.deepEqual(resolveCodexApiKey({ OPENAI_IMAGE_API_KEY: 'image-key', OPENAI_API_KEY: 'openai-key' }), {
+  assert.deepEqual(resolveOpenaiApiKey({ OPENAI_IMAGE_API_KEY: 'image-key', OPENAI_API_KEY: 'openai-key' }), {
     apiKey: 'image-key',
     source: 'OPENAI_IMAGE_API_KEY',
   });
 });
 
-test('resolveCodexBaseUrl and buildCodexImageEndpoint normalize OpenAI-compatible endpoints', () => {
-  assert.deepEqual(resolveCodexBaseUrl({ env: { OPENAI_IMAGE_BASE_URL: 'https://images.example/openai/v1', OPENAI_BASE_URL: 'https://api.example/v1' } }), {
+test('resolveOpenaiBaseUrl and buildOpenaiImageEndpoint normalize OpenAI-compatible endpoints', () => {
+  assert.deepEqual(resolveOpenaiBaseUrl({ env: { OPENAI_IMAGE_BASE_URL: 'https://images.example/openai/v1', OPENAI_BASE_URL: 'https://api.example/v1' } }), {
     baseUrl: 'https://images.example/openai/v1',
     source: 'OPENAI_IMAGE_BASE_URL',
   });
-  assert.deepEqual(resolveCodexBaseUrl({ baseUrl: 'https://cli.example/v1', env: { OPENAI_IMAGE_BASE_URL: 'https://images.example/v1' } }), {
+  assert.deepEqual(resolveOpenaiBaseUrl({ baseUrl: 'https://cli.example/v1', env: { OPENAI_IMAGE_BASE_URL: 'https://images.example/v1' } }), {
     baseUrl: 'https://cli.example/v1',
     source: '--base-url',
   });
-  assert.equal(buildCodexImageEndpoint('https://gateway.example/openai/v1'), 'https://gateway.example/openai/v1/images/generations');
-  assert.equal(buildCodexImageEndpoint('https://gateway.example/openai/v1/images/generations'), 'https://gateway.example/openai/v1/images/generations');
-  assert.equal(buildCodexImageEndpoint('https://gateway.example/openai'), 'https://gateway.example/openai/v1/images/generations');
+  assert.equal(buildOpenaiImageEndpoint('https://gateway.example/openai/v1'), 'https://gateway.example/openai/v1/images/generations');
+  assert.equal(buildOpenaiImageEndpoint('https://gateway.example/openai/v1/images/generations'), 'https://gateway.example/openai/v1/images/generations');
+  assert.equal(buildOpenaiImageEndpoint('https://gateway.example/openai'), 'https://gateway.example/openai/v1/images/generations');
 });
 
 test('resolveNanoBananaApiKey prefers GOOGLE_API_KEY and falls back to GEMINI_API_KEY', () => {
@@ -509,28 +508,28 @@ test('resolveNanoBananaOutputPath keeps nested asset-relative output values insi
   assert.equal(target.relativeRef, './assets/nested/hero-image.png');
 });
 
-test('buildCodexImageApiRequest maps slide aspect ratios to supported OpenAI landscape sizes', () => {
+test('buildOpenaiImageApiRequest maps slide aspect ratios to supported OpenAI landscape sizes', () => {
   assert.deepEqual(
-    buildCodexImageApiRequest({
+    buildOpenaiImageApiRequest({
       prompt: 'Generate a premium fintech dashboard hero image.',
-      model: DEFAULT_CODEX_IMAGE_MODEL,
+      model: DEFAULT_OPENAI_IMAGE_MODEL,
       aspectRatio: '16:9',
     }),
     {
-      model: DEFAULT_CODEX_IMAGE_MODEL,
+      model: DEFAULT_OPENAI_IMAGE_MODEL,
       prompt: 'Generate a premium fintech dashboard hero image.',
       size: '1536x1024',
     },
   );
 
   assert.deepEqual(
-    buildCodexImageApiRequest({
+    buildOpenaiImageApiRequest({
       prompt: 'Generate a square app icon.',
-      model: DEFAULT_CODEX_IMAGE_MODEL,
+      model: DEFAULT_OPENAI_IMAGE_MODEL,
       aspectRatio: '1:1',
     }),
     {
-      model: DEFAULT_CODEX_IMAGE_MODEL,
+      model: DEFAULT_OPENAI_IMAGE_MODEL,
       prompt: 'Generate a square app icon.',
       size: '1024x1024',
     },
@@ -583,8 +582,8 @@ test('extractGeneratedImage returns the first inline image part', () => {
   assert.equal(Buffer.from(payload.bytes).toString(), 'png-bytes');
 });
 
-test('getCodexFallbackMessage includes API key, Nano Banana fallback, and web search guidance', () => {
-  const message = getCodexFallbackMessage('Missing API key.');
+test('getOpenaiFallbackMessage includes API key, Nano Banana fallback, and web search guidance', () => {
+  const message = getOpenaiFallbackMessage('Missing API key.');
   assert.match(message, /OPENAI_API_KEY/i);
   assert.match(message, /GOOGLE_API_KEY|GEMINI_API_KEY/i);
   assert.match(message, /web search/i);
@@ -608,14 +607,14 @@ test('getNanoBananaFallbackMessage tells the agent to ask for a key or fall back
   );
 });
 
-test('main with explicit --provider codex generates Codex image into slides/assets', async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-image-test-'));
+test('main with explicit --provider openai generates OpenAI image into slides/assets', async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'openai-image-test-'));
   const output = [];
   const calls = [];
 
   try {
     await main(
-      ['--prompt', 'Studio portrait of a founder with warm rim light', '--slides-dir', workspace, '--provider', 'codex'],
+      ['--prompt', 'Studio portrait of a founder with warm rim light', '--slides-dir', workspace, '--provider', 'openai'],
       {
         env: { OPENAI_API_KEY: 'test-key' },
         fetchImpl: async (url, init) => {
@@ -646,21 +645,21 @@ test('main with explicit --provider codex generates Codex image into slides/asse
     assert.equal(calls[0].url, 'https://api.openai.com/v1/images/generations');
     assert.equal(calls[0].init.headers.Authorization, 'Bearer test-key');
     const requestBody = JSON.parse(calls[0].init.body);
-    assert.equal(requestBody.model, DEFAULT_CODEX_IMAGE_MODEL);
+    assert.equal(requestBody.model, DEFAULT_OPENAI_IMAGE_MODEL);
     assert.equal(requestBody.prompt, 'Studio portrait of a founder with warm rim light');
     assert.equal(requestBody.size, '1536x1024');
 
     const assetDir = path.join(workspace, 'assets');
-    const files = await readFile(path.join(assetDir, 'codex-studio-portrait-of-a-founder-with-warm-rim-light.png'));
+    const files = await readFile(path.join(assetDir, 'openai-studio-portrait-of-a-founder-with-warm-rim-light.png'));
     assert.equal(files.toString(), 'fake-image-bytes');
-    assert.match(output.join(''), /\.\/assets\/codex-studio-portrait-of-a-founder-with-warm-rim-light\.png/);
+    assert.match(output.join(''), /\.\/assets\/openai-studio-portrait-of-a-founder-with-warm-rim-light\.png/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
 });
 
-test('main with --provider codex uses OpenAI-compatible endpoint and key options', async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-compatible-image-test-'));
+test('main with --provider openai uses OpenAI-compatible endpoint and key options', async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'openai-compatible-image-test-'));
   const calls = [];
 
   try {
@@ -668,7 +667,7 @@ test('main with --provider codex uses OpenAI-compatible endpoint and key options
       [
         '--prompt', 'A compatible gateway render',
         '--slides-dir', workspace,
-        '--provider', 'codex',
+        '--provider', 'openai',
         '--base-url', 'https://gateway.example/openai/v1/',
         '--api-key-env', 'COMPAT_IMAGE_KEY',
       ],
@@ -690,20 +689,20 @@ test('main with --provider codex uses OpenAI-compatible endpoint and key options
 
     assert.equal(calls[0].url, 'https://gateway.example/openai/v1/images/generations');
     assert.equal(calls[0].init.headers.Authorization, 'Bearer compat-key');
-    const files = await readFile(path.join(workspace, 'assets', 'codex-a-compatible-gateway-render.png'));
+    const files = await readFile(path.join(workspace, 'assets', 'openai-a-compatible-gateway-render.png'));
     assert.equal(files.toString(), 'compatible-image-bytes');
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
 });
 
-test('main maps explicit square aspect ratio to OpenAI square size when provider=codex', async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-image-square-test-'));
+test('main maps explicit square aspect ratio to OpenAI square size when provider=openai', async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'openai-image-square-test-'));
   const calls = [];
 
   try {
     await main(
-      ['--prompt', 'A centered product icon', '--slides-dir', workspace, '--aspect-ratio', '1:1', '--provider', 'codex'],
+      ['--prompt', 'A centered product icon', '--slides-dir', workspace, '--aspect-ratio', '1:1', '--provider', 'openai'],
       {
         env: { OPENAI_API_KEY: 'test-key' },
         fetchImpl: async (url, init) => {
@@ -726,10 +725,10 @@ test('main maps explicit square aspect ratio to OpenAI square size when provider
   }
 });
 
-test('main with --provider codex rejects --image-size because it is Nano Banana only', async () => {
+test('main with --provider openai rejects --image-size because it is Nano Banana only', async () => {
   await assert.rejects(
     () => main(
-      ['--prompt', 'A floating product render', '--image-size', '2K', '--provider', 'codex'],
+      ['--prompt', 'A floating product render', '--image-size', '2K', '--provider', 'openai'],
       {
         env: { OPENAI_API_KEY: 'test-key' },
         fetchImpl: async () => {
@@ -741,13 +740,13 @@ test('main with --provider codex rejects --image-size because it is Nano Banana 
   );
 });
 
-test('main with --provider codex falls back to Nano Banana when OPENAI_API_KEY is unavailable but GOOGLE_API_KEY is configured', async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), 'codex-image-fallback-test-'));
+test('main with --provider openai falls back to Nano Banana when OPENAI_API_KEY is unavailable but GOOGLE_API_KEY is configured', async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'openai-image-fallback-test-'));
   const calls = [];
 
   try {
     await main(
-      ['--prompt', 'A floating product render', '--slides-dir', workspace, '--provider', 'codex'],
+      ['--prompt', 'A floating product render', '--slides-dir', workspace, '--provider', 'openai'],
       {
         env: { GOOGLE_API_KEY: 'google-key' },
         fetchImpl: async (url, init) => {
@@ -788,9 +787,9 @@ test('main with --provider codex falls back to Nano Banana when OPENAI_API_KEY i
   }
 });
 
-test('main with --provider codex throws an actionable fallback error when no API key is configured', async () => {
+test('main with --provider openai throws an actionable fallback error when no API key is configured', async () => {
   await assert.rejects(
-    () => main(['--prompt', 'A floating product render', '--provider', 'codex'], { env: {}, fetchImpl: async () => {
+    () => main(['--prompt', 'A floating product render', '--provider', 'openai'], { env: {}, fetchImpl: async () => {
       throw new Error('fetch should not be called');
     } }),
     /OPENAI_API_KEY/i,
@@ -850,10 +849,10 @@ test('main with --provider nano-banana hits the Gemini endpoint and writes the d
   }
 });
 
-test('main with --provider codex wraps network failures in the actionable Nano Banana fallback guidance', async () => {
+test('main with --provider openai wraps network failures in the actionable Nano Banana fallback guidance', async () => {
   await assert.rejects(
     () => main(
-      ['--prompt', 'A floating product render', '--provider', 'codex'],
+      ['--prompt', 'A floating product render', '--provider', 'openai'],
       {
         env: { OPENAI_API_KEY: 'test-key' },
         fetchImpl: async () => {

@@ -8,7 +8,7 @@ import {
   generateImageNativeSlides,
   parseImageNativeOutline,
 } from '../src/image-native.js';
-import { IMAGE_PROVIDER_GOD_TIBO } from '../src/nano-banana.js';
+import { IMAGE_PROVIDER_CODEX } from '../src/nano-banana.js';
 
 export {
   buildImageNativePrompt,
@@ -27,7 +27,7 @@ export function parseGenerateImagesCliArgs(argv) {
     outline: '',
     slidesDir: 'slides',
     templatePack: '',
-    provider: IMAGE_PROVIDER_GOD_TIBO,
+    provider: IMAGE_PROVIDER_CODEX,
     model: '',
     baseUrl: '',
     help: false,
@@ -120,12 +120,12 @@ export function getGenerateImagesUsage() {
     '  --outline <path>        Markdown slide outline to convert',
     '  --slides-dir <path>     Slide directory (default: slides)',
     '  --template-pack <path>  Optional template-pack.json path; defaults to <slides-dir>/.slides-grab/template-pack.json when present',
-    '  --provider <name>       god-tibo (default), codex, or nano-banana',
+    '  --provider <name>       codex (default), openai, or nano-banana',
     '  --model <id>            Optional provider model override',
-    '  --base-url <url>        Codex/OpenAI-compatible base URL for provider=codex',
+    '  --base-url <url>        OpenAI-compatible base URL for provider=openai',
     '  -h, --help              Show this help text',
     '',
-    'Default provider: god-tibo (uses your local Codex ChatGPT login — no API key required).',
+    'Default provider: codex (uses your local Codex ChatGPT login — no API key required).',
   ].join('\n');
 }
 

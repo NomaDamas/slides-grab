@@ -221,7 +221,7 @@ test('getPptDesignSkillPrompt loads bundled ppt design skill guidance', () => {
   assert.match(skillPrompt, /local videos/i);
   assert.match(skillPrompt, /fetch-video|yt-dlp/i);
   assert.match(skillPrompt, /slides-grab image/i);
-  assert.match(skillPrompt, /god-tibo-imagen/i);
+  assert.match(skillPrompt, /codex-imagen/i);
   assert.match(skillPrompt, /codex login/i);
   assert.match(skillPrompt, /Nano Banana/i);
 });
@@ -273,7 +273,7 @@ test('getDetailedDesignSkillPrompt loads only relevant detailed design sections'
   assert.match(detailedPrompt, /Would this still feel premium without shadows, cards, or extra chrome\?/i);
   assert.match(detailedPrompt, /local videos/i);
   assert.match(detailedPrompt, /fetch-video|yt-dlp/i);
-  assert.match(detailedPrompt, /god-tibo-imagen/i);
+  assert.match(detailedPrompt, /codex-imagen/i);
   assert.match(detailedPrompt, /codex login/i);
   assert.match(detailedPrompt, /Nano Banana/i);
   assert.doesNotMatch(detailedPrompt, /## Core Design Philosophy/);

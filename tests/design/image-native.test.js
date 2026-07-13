@@ -98,7 +98,7 @@ test('generateImageNativeSlides writes prompts, wrapper slides, and regeneration
       outlinePath,
       slidesDir,
       templatePack,
-      provider: 'god-tibo',
+      provider: 'codex',
       model: 'gpt-5.4',
       generateImageImpl: async () => ({ mimeType: 'image/png', bytes: tinyPng }),
     });
@@ -116,7 +116,7 @@ test('generateImageNativeSlides writes prompts, wrapper slides, and regeneration
 
     await stat(path.join(slidesDir, 'assets', 'slide-01.png'));
     const metadata = JSON.parse(await readFile(path.join(slidesDir, '.slides-grab', 'image-native', 'slide-01.json'), 'utf8'));
-    assert.equal(metadata.provider, 'god-tibo');
+    assert.equal(metadata.provider, 'codex');
     assert.equal(metadata.model, 'gpt-5.4');
     assert.equal(metadata.templateLayoutId, 'content-metric');
     assert.match(metadata.prompt, /Market map/);
@@ -170,7 +170,7 @@ test('generate-images script creates validation-compatible image wrapper slides 
     await generateImagesMain([
       '--outline', outlinePath,
       '--slides-dir', slidesDir,
-      '--provider', 'god-tibo',
+      '--provider', 'codex',
     ], {
       stdout: writable,
       generateImageImpl: async () => ({ mimeType: 'image/png', bytes: tinyPng }),

@@ -3,20 +3,20 @@ import { extname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { getSlidesDir } from './resolve.js';
 import {
-  GOD_TIBO_DEFAULT_MODEL,
-  GOD_TIBO_PROVIDER_AUTO,
-  generateGodTiboImage,
-  getGodTiboFallbackMessage,
-} from './god-tibo-imagen.js';
+  CODEX_DEFAULT_MODEL,
+  CODEX_PROVIDER_AUTO,
+  generateCodexImage,
+  getCodexFallbackMessage,
+} from './codex-imagen.js';
 
-export const IMAGE_PROVIDER_GOD_TIBO = 'god-tibo';
 export const IMAGE_PROVIDER_CODEX = 'codex';
+export const IMAGE_PROVIDER_OPENAI = 'openai';
 export const IMAGE_PROVIDER_NANO_BANANA = 'nano-banana';
-export const DEFAULT_IMAGE_PROVIDER = IMAGE_PROVIDER_GOD_TIBO;
-export const DEFAULT_GOD_TIBO_MODEL = GOD_TIBO_DEFAULT_MODEL;
-export const DEFAULT_CODEX_IMAGE_MODEL = 'gpt-image-2';
-export const DEFAULT_CODEX_IMAGE_SIZE = 'auto';
-export const DEFAULT_CODEX_IMAGE_BASE_URL = 'https://api.openai.com/v1';
+export const DEFAULT_IMAGE_PROVIDER = IMAGE_PROVIDER_CODEX;
+export const DEFAULT_CODEX_MODEL = CODEX_DEFAULT_MODEL;
+export const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
+export const DEFAULT_OPENAI_IMAGE_SIZE = 'auto';
+export const DEFAULT_OPENAI_IMAGE_BASE_URL = 'https://api.openai.com/v1';
 export const DEFAULT_NANO_BANANA_MODEL = 'gemini-3-pro-image-preview';
 export const DEFAULT_NANO_BANANA_ASPECT_RATIO = '16:9';
 export const DEFAULT_NANO_BANANA_IMAGE_SIZE = '4K';
@@ -24,18 +24,16 @@ const VALID_IMAGE_SIZES = new Set(['2K', '4K']);
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 const PROVIDER_ALIASES = new Map([
-  ['god-tibo', IMAGE_PROVIDER_GOD_TIBO],
-  ['godtibo', IMAGE_PROVIDER_GOD_TIBO],
-  ['codex-cli', IMAGE_PROVIDER_GOD_TIBO],
   ['codex', IMAGE_PROVIDER_CODEX],
-  ['openai', IMAGE_PROVIDER_CODEX],
+  ['codex-cli', IMAGE_PROVIDER_CODEX],
+  ['openai', IMAGE_PROVIDER_OPENAI],
   ['nano-banana', IMAGE_PROVIDER_NANO_BANANA],
   ['gemini', IMAGE_PROVIDER_NANO_BANANA],
 ]);
 
 const VALID_PROVIDERS = new Set([
-  IMAGE_PROVIDER_GOD_TIBO,
   IMAGE_PROVIDER_CODEX,
+  IMAGE_PROVIDER_OPENAI,
   IMAGE_PROVIDER_NANO_BANANA,
 ]);
 
@@ -64,31 +62,31 @@ export function getNanoBananaUsage() {
     'Usage: slides-grab image --prompt <text> [options]',
     '',
     'Generate a deck-local image asset and save it into <slides-dir>/assets/.',
-    'Default provider: god-tibo-imagen (uses your local Codex ChatGPT login — no OpenAI/Google API key required).',
+    'Default provider: codex-imagen (uses your local Codex ChatGPT login — no OpenAI/Google API key required).',
     '',
     'Options:',
     '  --prompt <text>         Required text prompt for image generation',
     '  --slides-dir <path>     Slides directory (default: slides)',
     '  --output <path>         Optional explicit output path inside <slides-dir>/assets/',
     '  --name <slug>           Optional asset basename without extension',
-    `  --provider <name>       Image provider: god-tibo (default), codex (OpenAI), or nano-banana.`,
-    '                          Aliases: codex-cli → god-tibo, openai → codex, gemini → nano-banana.',
-    `  --model <id>            Model id (default: ${DEFAULT_GOD_TIBO_MODEL} for god-tibo, ${DEFAULT_CODEX_IMAGE_MODEL} for codex, ${DEFAULT_NANO_BANANA_MODEL} for nano-banana)`,
-    `  --aspect-ratio <ratio>  Image aspect ratio; for god-tibo it is injected as a prompt hint, for codex it maps to the nearest supported OpenAI size (default: ${DEFAULT_NANO_BANANA_ASPECT_RATIO})`,
+    `  --provider <name>       Image provider: codex (default), openai, or nano-banana.`,
+    '                          Aliases: codex-cli → codex, openai → openai, gemini → nano-banana.',
+    `  --model <id>            Model id (default: ${DEFAULT_CODEX_MODEL} for codex, ${DEFAULT_OPENAI_IMAGE_MODEL} for openai, ${DEFAULT_NANO_BANANA_MODEL} for nano-banana)`,
+    `  --aspect-ratio <ratio>  Image aspect ratio; for codex it is injected as a prompt hint, for openai it maps to the nearest supported OpenAI size (default: ${DEFAULT_NANO_BANANA_ASPECT_RATIO})`,
     `  --image-size <size>     Nano Banana image size preset: 2K or 4K (default: ${DEFAULT_NANO_BANANA_IMAGE_SIZE})`,
     '  -h, --help              Show this help text',
-    '  --base-url <url>      Codex/OpenAI-compatible base URL (default: OPENAI_IMAGE_BASE_URL, OPENAI_BASE_URL, then https://api.openai.com/v1)',
-    '  --api-key-env <name>   Env var to read for Codex/OpenAI-compatible provider API key',
-    '  --reference <path>     Reference image path(s) for style-guided generation (god-tibo only, repeatable)',
+    '  --base-url <url>      OpenAI-compatible base URL (default: OPENAI_IMAGE_BASE_URL, OPENAI_BASE_URL, then https://api.openai.com/v1)',
+    '  --api-key-env <name>   Env var to read for OpenAI-compatible provider API key',
+    '  --reference <path>     Reference image path(s) for style-guided generation (codex only, repeatable)',
     '',
     'Auth:',
-    '  Default (god-tibo): run `codex login` once to populate ~/.codex/auth.json. No OpenAI/Google API key required;',
+    '  Default (codex): run `codex login` once to populate ~/.codex/auth.json. No OpenAI/Google API key required;',
     '                      requires a Codex/ChatGPT account entitled to image generation.',
-    '  Codex/OpenAI provider: set OPENAI_API_KEY.',
+    '  OpenAI provider: set OPENAI_API_KEY.',
     '                       Compatible endpoints may use --base-url, OPENAI_IMAGE_BASE_URL, OPENAI_BASE_URL, and --api-key-env.',
     '  Nano Banana provider: set GOOGLE_API_KEY or GEMINI_API_KEY.',
     '',
-    'WARNING: god-tibo-imagen calls an unsupported private Codex backend that may break without notice.',
+    'WARNING: codex-imagen calls an unsupported private Codex backend that may break without notice.',
   ].join('\n');
 }
 
@@ -265,19 +263,19 @@ export function parseNanoBananaCliArgs(argv) {
   }
   parsed.provider = normalizeImageProvider(parsed.provider);
   if (!VALID_PROVIDERS.has(parsed.provider)) {
-    throw new Error(`Unknown --provider value: ${parsed.provider}. Expected god-tibo, codex, or nano-banana.`);
+    throw new Error(`Unknown --provider value: ${parsed.provider}. Expected codex, openai, or nano-banana.`);
   }
 
   if (typeof parsed.model !== 'string') {
     throw new Error('--model must be a string.');
   }
   if (!parsed.model.trim()) {
-    if (parsed.provider === IMAGE_PROVIDER_GOD_TIBO) {
-      parsed.model = DEFAULT_GOD_TIBO_MODEL;
+    if (parsed.provider === IMAGE_PROVIDER_CODEX) {
+      parsed.model = DEFAULT_CODEX_MODEL;
     } else if (parsed.provider === IMAGE_PROVIDER_NANO_BANANA) {
       parsed.model = DEFAULT_NANO_BANANA_MODEL;
     } else {
-      parsed.model = DEFAULT_CODEX_IMAGE_MODEL;
+      parsed.model = DEFAULT_OPENAI_IMAGE_MODEL;
     }
   } else {
     parsed.model = parsed.model.trim();
@@ -308,7 +306,7 @@ export function parseNanoBananaCliArgs(argv) {
   return parsed;
 }
 
-export function resolveCodexApiKey(env = process.env, { apiKeyEnv = '' } = {}) {
+export function resolveOpenaiApiKey(env = process.env, { apiKeyEnv = '' } = {}) {
   const explicitEnvName = typeof apiKeyEnv === 'string' ? apiKeyEnv.trim() : '';
   const candidates = explicitEnvName
     ? [explicitEnvName, 'OPENAI_IMAGE_API_KEY', 'OPENAI_API_KEY']
@@ -324,7 +322,7 @@ export function resolveCodexApiKey(env = process.env, { apiKeyEnv = '' } = {}) {
   return { apiKey: '', source: '' };
 }
 
-export function resolveCodexBaseUrl({ baseUrl = '', env = process.env } = {}) {
+export function resolveOpenaiBaseUrl({ baseUrl = '', env = process.env } = {}) {
   const explicitBaseUrl = typeof baseUrl === 'string' ? baseUrl.trim() : '';
   if (explicitBaseUrl) {
     return { baseUrl: explicitBaseUrl, source: '--base-url' };
@@ -340,7 +338,7 @@ export function resolveCodexBaseUrl({ baseUrl = '', env = process.env } = {}) {
     return { baseUrl: openAiBaseUrl, source: 'OPENAI_BASE_URL' };
   }
 
-  return { baseUrl: DEFAULT_CODEX_IMAGE_BASE_URL, source: 'default' };
+  return { baseUrl: DEFAULT_OPENAI_IMAGE_BASE_URL, source: 'default' };
 }
 
 export function resolveNanoBananaApiKey(env = process.env) {
@@ -362,9 +360,9 @@ export function getNanoBananaFallbackMessage(reason) {
   return `${summary} Nano Banana is the fallback provider: set GOOGLE_API_KEY (or GEMINI_API_KEY), or fall back to web search + download the chosen image into ./assets/<file>.`;
 }
 
-export function getCodexFallbackMessage(reason) {
-  const summary = typeof reason === 'string' && reason.trim() ? reason.trim() : 'Codex image generation failed.';
-  return `${summary} The Codex/OpenAI-compatible provider requires OPENAI_API_KEY (or OPENAI_IMAGE_API_KEY / --api-key-env). Configure compatible endpoints with --base-url, OPENAI_IMAGE_BASE_URL, or OPENAI_BASE_URL. Nano Banana remains available as a fallback with GOOGLE_API_KEY or GEMINI_API_KEY. If image generation credentials are unavailable, use web search and download the chosen image into ./assets/<file>.`;
+export function getOpenaiFallbackMessage(reason) {
+  const summary = typeof reason === 'string' && reason.trim() ? reason.trim() : 'OpenAI image generation failed.';
+  return `${summary} The OpenAI-compatible provider requires OPENAI_API_KEY (or OPENAI_IMAGE_API_KEY / --api-key-env). Configure compatible endpoints with --base-url, OPENAI_IMAGE_BASE_URL, or OPENAI_BASE_URL. Nano Banana remains available as a fallback with GOOGLE_API_KEY or GEMINI_API_KEY. If image generation credentials are unavailable, use web search and download the chosen image into ./assets/<file>.`;
 }
 
 function parseAspectRatioOrientation(aspectRatio) {
@@ -385,9 +383,9 @@ function parseAspectRatioOrientation(aspectRatio) {
   return width > height ? 'landscape' : 'portrait';
 }
 
-export function resolveCodexImageSize({
+export function resolveOpenaiImageSize({
   aspectRatio = DEFAULT_NANO_BANANA_ASPECT_RATIO,
-  size = DEFAULT_CODEX_IMAGE_SIZE,
+  size = DEFAULT_OPENAI_IMAGE_SIZE,
 } = {}) {
   if (size && size !== 'auto') {
     return size;
@@ -403,16 +401,16 @@ export function resolveCodexImageSize({
   return '1536x1024';
 }
 
-export function buildCodexImageApiRequest({
+export function buildOpenaiImageApiRequest({
   prompt,
-  model = DEFAULT_CODEX_IMAGE_MODEL,
+  model = DEFAULT_OPENAI_IMAGE_MODEL,
   aspectRatio = DEFAULT_NANO_BANANA_ASPECT_RATIO,
-  size = DEFAULT_CODEX_IMAGE_SIZE,
+  size = DEFAULT_OPENAI_IMAGE_SIZE,
 }) {
   return {
     model,
     prompt,
-    size: resolveCodexImageSize({ aspectRatio, size }),
+    size: resolveOpenaiImageSize({ aspectRatio, size }),
   };
 }
 
@@ -447,10 +445,10 @@ function pickAssetBaseName({ prompt, name, provider = IMAGE_PROVIDER_NANO_BANANA
 
   const fromPrompt = sanitizeAssetName(prompt);
   let prefix;
-  if (provider === IMAGE_PROVIDER_GOD_TIBO) {
-    prefix = 'god-tibo';
-  } else if (provider === IMAGE_PROVIDER_CODEX) {
+  if (provider === IMAGE_PROVIDER_CODEX) {
     prefix = 'codex';
+  } else if (provider === IMAGE_PROVIDER_OPENAI) {
+    prefix = 'openai';
   } else {
     prefix = 'nano-banana';
   }
@@ -526,7 +524,7 @@ export function resolveNanoBananaOutputPath({
   };
 }
 
-export function extractCodexGeneratedImage(payload) {
+export function extractOpenaiGeneratedImage(payload) {
   const images = Array.isArray(payload?.data) ? payload.data : [];
   for (const image of images) {
     if (typeof image?.b64_json === 'string' && image.b64_json.trim()) {
@@ -537,7 +535,7 @@ export function extractCodexGeneratedImage(payload) {
     }
   }
 
-  throw new Error('Codex image generation response did not include an image payload.');
+  throw new Error('OpenAI image generation response did not include an image payload.');
 }
 
 export function extractGeneratedImage(payload) {
@@ -559,18 +557,18 @@ export function extractGeneratedImage(payload) {
   throw new Error('Nano Banana API response did not include an image payload.');
 }
 
-const CODEX_IMAGE_ENDPOINT_PATH = '/images/generations';
+const OPENAI_IMAGE_ENDPOINT_PATH = '/images/generations';
 
-export function buildCodexImageEndpoint(baseUrl = DEFAULT_CODEX_IMAGE_BASE_URL) {
-  const value = String(baseUrl || DEFAULT_CODEX_IMAGE_BASE_URL).trim() || DEFAULT_CODEX_IMAGE_BASE_URL;
+export function buildOpenaiImageEndpoint(baseUrl = DEFAULT_OPENAI_IMAGE_BASE_URL) {
+  const value = String(baseUrl || DEFAULT_OPENAI_IMAGE_BASE_URL).trim() || DEFAULT_OPENAI_IMAGE_BASE_URL;
   const url = new URL(value);
   const path = url.pathname.replace(/\/+$/, '');
   if (/\/images\/generations$/i.test(path)) {
     url.pathname = path;
   } else if (/\/v1$/i.test(path)) {
-    url.pathname = `${path}${CODEX_IMAGE_ENDPOINT_PATH}`;
+    url.pathname = `${path}${OPENAI_IMAGE_ENDPOINT_PATH}`;
   } else {
-    url.pathname = `${path}/v1${CODEX_IMAGE_ENDPOINT_PATH}`.replace(/\/+/g, '/');
+    url.pathname = `${path}/v1${OPENAI_IMAGE_ENDPOINT_PATH}`.replace(/\/+/g, '/');
   }
   url.search = '';
   url.hash = '';
@@ -589,34 +587,34 @@ function getApiErrorMessage(payload, status) {
   return `HTTP ${status}`;
 }
 
-export async function generateCodexImage({
+export async function generateOpenaiImage({
   prompt,
   apiKey,
-  model = DEFAULT_CODEX_IMAGE_MODEL,
+  model = DEFAULT_OPENAI_IMAGE_MODEL,
   aspectRatio = DEFAULT_NANO_BANANA_ASPECT_RATIO,
-  size = DEFAULT_CODEX_IMAGE_SIZE,
+  size = DEFAULT_OPENAI_IMAGE_SIZE,
   fetchImpl = globalThis.fetch,
-  baseUrl = DEFAULT_CODEX_IMAGE_BASE_URL,
+  baseUrl = DEFAULT_OPENAI_IMAGE_BASE_URL,
 }) {
   if (typeof fetchImpl !== 'function') {
     throw new Error('Global fetch is unavailable in this runtime.');
   }
 
-  const response = await fetchImpl(buildCodexImageEndpoint(baseUrl), {
+  const response = await fetchImpl(buildOpenaiImageEndpoint(baseUrl), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(buildCodexImageApiRequest({ prompt, model, aspectRatio, size })),
+    body: JSON.stringify(buildOpenaiImageApiRequest({ prompt, model, aspectRatio, size })),
   });
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(`Codex image generation request failed: ${getApiErrorMessage(payload, response.status)}.`);
+    throw new Error(`OpenAI image generation request failed: ${getApiErrorMessage(payload, response.status)}.`);
   }
 
-  return extractCodexGeneratedImage(payload);
+  return extractOpenaiGeneratedImage(payload);
 }
 
 export async function generateNanoBananaImage({
@@ -668,36 +666,36 @@ async function generateNanoBananaFallbackImage({ options, apiKey, fetchImpl }) {
   });
 }
 
-function resolveGodTiboModel(options) {
-  return options.model && options.model.trim() ? options.model : DEFAULT_GOD_TIBO_MODEL;
+function resolveCodexModel(options) {
+  return options.model && options.model.trim() ? options.model : DEFAULT_CODEX_MODEL;
 }
 
-async function generateGodTiboFallbackImage({ options, generateGodTiboImageImpl }) {
-  return generateGodTiboImageImpl({
+async function generateCodexFallbackImage({ options, generateCodexImageImpl }) {
+  return generateCodexImageImpl({
     prompt: options.prompt,
-    model: resolveGodTiboModel(options),
+    model: resolveCodexModel(options),
     aspectRatio: options.aspectRatio,
-    providerMode: GOD_TIBO_PROVIDER_AUTO,
+    providerMode: CODEX_PROVIDER_AUTO,
     referenceImages: options.referenceImages || [],
   });
 }
 
-function resolveCodexModel(options) {
-  return options.model && options.model.trim() && options.model !== DEFAULT_GOD_TIBO_MODEL
+function resolveOpenaiModel(options) {
+  return options.model && options.model.trim() && options.model !== DEFAULT_CODEX_MODEL
     ? options.model
-    : DEFAULT_CODEX_IMAGE_MODEL;
+    : DEFAULT_OPENAI_IMAGE_MODEL;
 }
 
-async function generateCodexFallbackImage({ options, apiKey, fetchImpl, requestedNanoBananaImageSize, baseUrl }) {
+async function generateOpenaiFallbackImage({ options, apiKey, fetchImpl, requestedNanoBananaImageSize, baseUrl }) {
   if (requestedNanoBananaImageSize) {
     throw new Error(
-      '--image-size is only supported by the Nano Banana provider; Codex/OpenAI maps --aspect-ratio to the nearest supported OpenAI image size. Use --provider nano-banana for 2K or 4K presets.',
+      '--image-size is only supported by the Nano Banana provider; OpenAI maps --aspect-ratio to the nearest supported OpenAI image size. Use --provider nano-banana for 2K or 4K presets.',
     );
   }
-  return generateCodexImage({
+  return generateOpenaiImage({
     prompt: options.prompt,
     apiKey,
-    model: resolveCodexModel(options),
+    model: resolveOpenaiModel(options),
     aspectRatio: options.aspectRatio,
     fetchImpl,
     baseUrl,
@@ -723,7 +721,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
   env = process.env,
   fetchImpl = globalThis.fetch,
   stdout = process.stdout,
-  generateGodTiboImageImpl = generateGodTiboImage,
+  generateCodexImageImpl = generateCodexImage,
 } = {}) {
   const options = parseNanoBananaCliArgs(argv);
   if (options.help) {
@@ -737,30 +735,30 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
   const requestedNanoBananaImageSize = argvIncludesOption(argv, '--image-size');
   const fallbackNotices = [];
 
-  if (options.provider === IMAGE_PROVIDER_GOD_TIBO) {
+  if (options.provider === IMAGE_PROVIDER_CODEX) {
     try {
-      generated = await generateGodTiboFallbackImage({ options, generateGodTiboImageImpl });
-      modelUsed = resolveGodTiboModel(options);
-    } catch (godTiboError) {
-      const codexResolution = resolveCodexApiKey(env, { apiKeyEnv: options.apiKeyEnv });
-      if (codexResolution.apiKey) {
-        fallbackNotices.push(`god-tibo failed (${godTiboError.message?.split('.')[0] || 'error'}); falling back to Codex/OpenAI.`);
+      generated = await generateCodexFallbackImage({ options, generateCodexImageImpl });
+      modelUsed = resolveCodexModel(options);
+    } catch (codexImagenError) {
+      const openaiResolution = resolveOpenaiApiKey(env, { apiKeyEnv: options.apiKeyEnv });
+      if (openaiResolution.apiKey) {
+        fallbackNotices.push(`codex failed (${codexImagenError.message?.split('.')[0] || 'error'}); falling back to OpenAI.`);
         try {
-          generated = await generateCodexFallbackImage({
+          generated = await generateOpenaiFallbackImage({
             options,
-            apiKey: codexResolution.apiKey,
+            apiKey: openaiResolution.apiKey,
             fetchImpl,
             requestedNanoBananaImageSize,
-            baseUrl: resolveCodexBaseUrl({ baseUrl: options.baseUrl, env }).baseUrl,
+            baseUrl: resolveOpenaiBaseUrl({ baseUrl: options.baseUrl, env }).baseUrl,
           });
-          providerUsed = IMAGE_PROVIDER_CODEX;
-          modelUsed = resolveCodexModel(options);
-        } catch (codexError) {
+          providerUsed = IMAGE_PROVIDER_OPENAI;
+          modelUsed = resolveOpenaiModel(options);
+        } catch (openaiError) {
           const nanoResolution = resolveNanoBananaApiKey(env);
           if (!nanoResolution.apiKey) {
-            throw new Error(getGodTiboFallbackMessage(codexError.message));
+            throw new Error(getCodexFallbackMessage(openaiError.message));
           }
-          fallbackNotices.push(`Codex/OpenAI fallback failed; falling back to Nano Banana.`);
+          fallbackNotices.push(`OpenAI fallback failed; falling back to Nano Banana.`);
           generated = await generateNanoBananaFallbackImage({ options, apiKey: nanoResolution.apiKey, fetchImpl });
           providerUsed = IMAGE_PROVIDER_NANO_BANANA;
           modelUsed = DEFAULT_NANO_BANANA_MODEL;
@@ -768,30 +766,30 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
       } else {
         const nanoResolution = resolveNanoBananaApiKey(env);
         if (!nanoResolution.apiKey) {
-          throw new Error(getGodTiboFallbackMessage(godTiboError.message));
+          throw new Error(getCodexFallbackMessage(codexImagenError.message));
         }
-        fallbackNotices.push(`god-tibo failed (${godTiboError.message?.split('.')[0] || 'error'}); falling back to Nano Banana.`);
+        fallbackNotices.push(`codex failed (${codexImagenError.message?.split('.')[0] || 'error'}); falling back to Nano Banana.`);
         generated = await generateNanoBananaFallbackImage({ options, apiKey: nanoResolution.apiKey, fetchImpl });
         providerUsed = IMAGE_PROVIDER_NANO_BANANA;
         modelUsed = DEFAULT_NANO_BANANA_MODEL;
       }
     }
-  } else if (options.provider === IMAGE_PROVIDER_CODEX) {
-    const { apiKey: codexApiKey } = resolveCodexApiKey(env, { apiKeyEnv: options.apiKeyEnv });
-    if (codexApiKey) {
+  } else if (options.provider === IMAGE_PROVIDER_OPENAI) {
+    const { apiKey: openaiApiKey } = resolveOpenaiApiKey(env, { apiKeyEnv: options.apiKeyEnv });
+    if (openaiApiKey) {
       try {
-        generated = await generateCodexFallbackImage({
+        generated = await generateOpenaiFallbackImage({
           options,
-          apiKey: codexApiKey,
+          apiKey: openaiApiKey,
           fetchImpl,
           requestedNanoBananaImageSize,
-          baseUrl: resolveCodexBaseUrl({ baseUrl: options.baseUrl, env }).baseUrl,
+          baseUrl: resolveOpenaiBaseUrl({ baseUrl: options.baseUrl, env }).baseUrl,
         });
-        modelUsed = resolveCodexModel(options);
+        modelUsed = resolveOpenaiModel(options);
       } catch (error) {
         const { apiKey: fallbackApiKey } = resolveNanoBananaApiKey(env);
         if (!fallbackApiKey) {
-          throw new Error(getCodexFallbackMessage(error.message));
+          throw new Error(getOpenaiFallbackMessage(error.message));
         }
         providerUsed = IMAGE_PROVIDER_NANO_BANANA;
         generated = await generateNanoBananaFallbackImage({ options, apiKey: fallbackApiKey, fetchImpl });
@@ -800,7 +798,7 @@ export async function runNanoBananaCli(argv = process.argv.slice(2), {
     } else {
       const { apiKey: fallbackApiKey } = resolveNanoBananaApiKey(env);
       if (!fallbackApiKey) {
-        throw new Error(getCodexFallbackMessage(`Codex image generation requires ${options.apiKeyEnv || 'OPENAI_API_KEY'}.`));
+        throw new Error(getOpenaiFallbackMessage(`OpenAI image generation requires ${options.apiKeyEnv || 'OPENAI_API_KEY'}.`));
       }
       providerUsed = IMAGE_PROVIDER_NANO_BANANA;
       generated = await generateNanoBananaFallbackImage({ options, apiKey: fallbackApiKey, fetchImpl });

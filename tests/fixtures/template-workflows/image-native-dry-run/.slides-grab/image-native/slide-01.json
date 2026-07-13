@@ -1,7 +1,7 @@
 {
   "slideFile": "slide-01.html",
   "assetRef": "./assets/slide-01.png",
-  "provider": "god-tibo",
+  "provider": "codex",
   "model": "gpt-5.4",
   "prompt": "Create a 16:9 executive summary slide in the fixture corporate template style.",
   "templatePack": {

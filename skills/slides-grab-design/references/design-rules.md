@@ -7,7 +7,7 @@ These are the packaged design rules for installable `slides-grab` skills.
 - Build review viewer: `slides-grab build-viewer --slides-dir <path>`
 - Launch HTML editor: `slides-grab edit --slides-dir <path>`
 - Launch image-native editor for revisions: `slides-grab edit-image --slides-dir <path>`
-- Generate a bespoke image asset: `slides-grab image --prompt "<prompt>" --slides-dir <path>` (default provider: god-tibo-imagen via `codex login` — no API key required)
+- Generate a bespoke image asset: `slides-grab image --prompt "<prompt>" --slides-dir <path>` (default provider: codex-imagen via `codex login` — no API key required)
 - Download a web video into slide assets: `slides-grab fetch-video --url <youtube-url> --slides-dir <path>`
 - Render `tldraw` diagrams: `slides-grab tldraw --input <path> --output <path>`
 - List bundled design collections: `slides-grab list-styles`
@@ -36,11 +36,11 @@ These are the packaged design rules for installable `slides-grab` skills.
 ## Asset rules
 - Store deck-local assets in `<slides-dir>/assets/`
 - Reference deck-local assets as `./assets/<file>`
-- Use `slides-grab image --prompt "<prompt>" --slides-dir <path>` with the default god-tibo-imagen provider (Codex CLI ChatGPT login) for bespoke generated images when helpful
+- Use `slides-grab image --prompt "<prompt>" --slides-dir <path>` with the default codex-imagen provider (Codex CLI ChatGPT login) for bespoke generated images when helpful
 - If an image comes from the web, download it into `<slides-dir>/assets/` before referencing it
 - If a video comes from YouTube or another supported page, use `slides-grab fetch-video` (or `yt-dlp` directly) to download it into `<slides-dir>/assets/` before referencing it
 - Keep local videos and their poster thumbnails together under `<slides-dir>/assets/`
-- Default provider god-tibo-imagen reuses the local Codex ChatGPT login (`~/.codex/auth.json`) — run `codex login` once; no API key required. ⚠️ god-tibo-imagen uses an unsupported private Codex backend that may break without notice. Optional fallbacks: `--provider codex` (Codex/OpenAI gpt-image-2 via `OPENAI_API_KEY`; maps `--aspect-ratio` to the nearest supported OpenAI image size; `--image-size 2K|4K` is Nano Banana-only) or `--provider nano-banana` (Google `gemini-3-pro-image-preview` via `GOOGLE_API_KEY` / `GEMINI_API_KEY`; supports `--image-size 2K|4K`). If credentials are unavailable, fall back to web search + download
+- Default provider codex-imagen reuses the local Codex ChatGPT login (`~/.codex/auth.json`) — run `codex login` once; no API key required. ⚠️ codex-imagen uses an unsupported private Codex backend that may break without notice. Optional fallbacks: `--provider codex` (OpenAI gpt-image-2 via `OPENAI_API_KEY`; maps `--aspect-ratio` to the nearest supported OpenAI image size; `--image-size 2K|4K` is Nano Banana-only) or `--provider nano-banana` (Google `gemini-3-pro-image-preview` via `GOOGLE_API_KEY` / `GEMINI_API_KEY`; supports `--image-size 2K|4K`). If credentials are unavailable, fall back to web search + download
 - Use `tldraw`-generated local assets for complex diagrams when possible
 - Allow `data:` URLs only when the slide must be fully self-contained
 - Do not leave remote `http(s)://` image URLs in saved slide HTML

@@ -2,21 +2,21 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  GOD_TIBO_DEFAULT_MODEL,
-  GOD_TIBO_PROVIDER_AUTO,
-  GOD_TIBO_PROVIDER_PRIVATE_CODEX,
-  GOD_TIBO_PROVIDER_CODEX_CLI,
-  generateGodTiboImage,
-  getGodTiboFallbackMessage,
+  CODEX_DEFAULT_MODEL,
+  CODEX_PROVIDER_AUTO,
+  CODEX_PROVIDER_PRIVATE_CODEX,
+  CODEX_PROVIDER_CODEX_CLI,
+  generateCodexImage,
+  getCodexFallbackMessage,
   injectAspectRatioHint,
-  resolveGodTiboConfig,
-} from '../../src/god-tibo-imagen.js';
+  resolveCodexConfig,
+} from '../../src/codex-imagen.js';
 
-test('exports expose god-tibo provider modes and default model', () => {
-  assert.equal(GOD_TIBO_DEFAULT_MODEL, 'gpt-5.4');
-  assert.equal(GOD_TIBO_PROVIDER_AUTO, 'auto');
-  assert.equal(GOD_TIBO_PROVIDER_PRIVATE_CODEX, 'private-codex');
-  assert.equal(GOD_TIBO_PROVIDER_CODEX_CLI, 'codex-cli');
+test('exports expose codex provider modes and default model', () => {
+  assert.equal(CODEX_DEFAULT_MODEL, 'gpt-5.4');
+  assert.equal(CODEX_PROVIDER_AUTO, 'auto');
+  assert.equal(CODEX_PROVIDER_PRIVATE_CODEX, 'private-codex');
+  assert.equal(CODEX_PROVIDER_CODEX_CLI, 'codex-cli');
 });
 
 test('injectAspectRatioHint appends explicit hints for known ratios', () => {
@@ -53,37 +53,37 @@ test('injectAspectRatioHint rejects empty prompts', () => {
   assert.throws(() => injectAspectRatioHint('   ', '16:9'), /must be a non-empty string/i);
 });
 
-test('resolveGodTiboConfig forwards provider mode through resolveConfigImpl override', () => {
+test('resolveCodexConfig forwards provider mode through resolveConfigImpl override', () => {
   const seen = [];
   const fakeResolve = (config) => {
     seen.push(config);
     return { provider: config.provider };
   };
-  const resolved = resolveGodTiboConfig({ providerMode: 'private-codex', resolveConfigImpl: fakeResolve });
+  const resolved = resolveCodexConfig({ providerMode: 'private-codex', resolveConfigImpl: fakeResolve });
   assert.deepEqual(seen, [{ provider: 'private-codex' }]);
   assert.deepEqual(resolved, { provider: 'private-codex' });
 });
 
-test('getGodTiboFallbackMessage mentions codex login and the optional API key fallbacks', () => {
-  const message = getGodTiboFallbackMessage('Auth missing');
+test('getCodexFallbackMessage mentions codex login and the optional API key fallbacks', () => {
+  const message = getCodexFallbackMessage('Auth missing');
   assert.match(message, /codex login/);
   assert.match(message, /OPENAI_API_KEY/);
   assert.match(message, /GOOGLE_API_KEY|GEMINI_API_KEY/);
   assert.match(message, /\.\/assets\//);
 });
 
-test('generateGodTiboImage requires a non-empty prompt', async () => {
+test('generateCodexImage requires a non-empty prompt', async () => {
   await assert.rejects(
-    () => generateGodTiboImage({ prompt: '   ' }),
+    () => generateCodexImage({ prompt: '   ' }),
     /prompt must be a non-empty string/i,
   );
   await assert.rejects(
-    () => generateGodTiboImage({}),
+    () => generateCodexImage({}),
     /prompt must be a non-empty string/i,
   );
 });
 
-test('generateGodTiboImage returns a synthetic dry-run result without calling the backend', async () => {
+test('generateCodexImage returns a synthetic dry-run result without calling the backend', async () => {
   const calls = [];
   const fakeProvider = {
     async generateImage(args) {
@@ -92,7 +92,7 @@ test('generateGodTiboImage returns a synthetic dry-run result without calling th
     },
   };
 
-  const result = await generateGodTiboImage({
+  const result = await generateCodexImage({
     prompt: 'flat blue square icon',
     aspectRatio: '1:1',
     dryRun: true,
@@ -104,7 +104,7 @@ test('generateGodTiboImage returns a synthetic dry-run result without calling th
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].prompt, 'flat blue square icon (square 1:1 aspect ratio)');
-  assert.equal(calls[0].model, GOD_TIBO_DEFAULT_MODEL);
+  assert.equal(calls[0].model, CODEX_DEFAULT_MODEL);
   assert.equal(calls[0].dryRun, true);
   assert.equal(result.mode, 'dry-run');
   assert.equal(result.mimeType, 'image/png');
@@ -112,7 +112,7 @@ test('generateGodTiboImage returns a synthetic dry-run result without calling th
   assert.deepEqual(result.warnings, ['unsupported private backend']);
 });
 
-test('generateGodTiboImage reads bytes from the provider tempfile and cleans up', async () => {
+test('generateCodexImage reads bytes from the provider tempfile and cleans up', async () => {
   const { writeFile } = await import('node:fs/promises');
   const { stat } = await import('node:fs/promises');
   let capturedDir = null;
@@ -125,7 +125,7 @@ test('generateGodTiboImage reads bytes from the provider tempfile and cleans up'
     },
   };
 
-  const result = await generateGodTiboImage({
+  const result = await generateCodexImage({
     prompt: 'studio portrait of a founder',
     aspectRatio: '16:9',
     deps: {
@@ -144,7 +144,7 @@ test('generateGodTiboImage reads bytes from the provider tempfile and cleans up'
   await assert.rejects(stat(capturedDir), /ENOENT/);
 });
 
-test('generateGodTiboImage wraps backend errors with cause and fallback message', async () => {
+test('generateCodexImage wraps backend errors with cause and fallback message', async () => {
   const fakeProvider = {
     async generateImage() {
       const err = new Error('Unauthorized from private Codex backend.');
@@ -154,7 +154,7 @@ test('generateGodTiboImage wraps backend errors with cause and fallback message'
   };
 
   await assert.rejects(
-    generateGodTiboImage({
+    generateCodexImage({
       prompt: 'flat blue square',
       deps: {
         resolveConfig: () => ({ provider: 'auto' }),
@@ -170,7 +170,7 @@ test('generateGodTiboImage wraps backend errors with cause and fallback message'
   );
 });
 
-test('generateGodTiboImage preserves provider warnings when the call succeeds', async () => {
+test('generateCodexImage preserves provider warnings when the call succeeds', async () => {
   const { writeFile } = await import('node:fs/promises');
   const fakeProvider = {
     async generateImage({ outputPath }) {
@@ -183,7 +183,7 @@ test('generateGodTiboImage preserves provider warnings when the call succeeds', 
     },
   };
 
-  const result = await generateGodTiboImage({
+  const result = await generateCodexImage({
     prompt: 'a calm seascape',
     deps: {
       resolveConfig: () => ({ provider: 'auto' }),

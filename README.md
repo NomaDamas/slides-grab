@@ -98,7 +98,7 @@ slides-grab pdf --resolution 2160p  # Higher-resolution image-backed PDF export
 slides-grab pdf --mode print  # Export searchable/selectable text PDF
 slides-grab png               # Render one PNG per slide (default 2160p)
 slides-grab png --slide-mode card-news  # Render square 1:1 PNGs for Instagram
-slides-grab image --prompt "..."    # Generate a local slide image with god-tibo-imagen by default (uses your local Codex ChatGPT login — no API key required)
+slides-grab image --prompt "..."    # Generate a local slide image with codex-imagen by default (uses your local Codex ChatGPT login — no API key required)
 slides-grab fetch-video --url <youtube-url> --slides-dir decks/my-deck  # Download a local video asset with yt-dlp
 slides-grab tldraw           # Render a .tldr diagram into a slide-sized local SVG asset
 slides-grab list-templates    # Show available slide templates
@@ -156,7 +156,7 @@ Slides should store local image and video files in `<slides-dir>/assets/` and re
 - Unsupported: absolute filesystem paths such as `/Users/...` or `C:\\...`
 - Unsupported for saved slides: remote video URLs; download them into `<slides-dir>/assets/` first
 
-For bespoke generated imagery, slides-grab bundles **god-tibo-imagen** as the default provider. It reuses your local Codex ChatGPT login (`~/.codex/auth.json`), so **no separate OpenAI/Google API key is required** — you only need a Codex CLI ChatGPT login on an account that is entitled to image generation:
+For bespoke generated imagery, slides-grab bundles **codex-imagen** as the default provider. It reuses your local Codex ChatGPT login (`~/.codex/auth.json`), so **no separate OpenAI/Google API key is required** — you only need a Codex CLI ChatGPT login on an account that is entitled to image generation:
 
 ```bash
 codex login            # one-time setup if not already logged in
@@ -165,14 +165,14 @@ slides-grab image --slides-dir decks/my-deck --prompt "Editorial hero image of a
 
 The command saves the result into `<slides-dir>/assets/` and prints the portable `./assets/<file>` reference to use from slide HTML.
 
-> ⚠️ **WARNING**: god-tibo-imagen calls an unsupported private Codex backend that may break without notice. It also requires a Codex/ChatGPT account that is entitled to image generation; not all ChatGPT accounts have this entitlement.
+> ⚠️ **WARNING**: codex-imagen calls an unsupported private Codex backend that may break without notice. It also requires a Codex/ChatGPT account that is entitled to image generation; not all ChatGPT accounts have this entitlement.
 
 Optional alternative providers via `--provider`:
 
-- `--provider codex` (alias `openai`): Codex/OpenAI `gpt-image-2`. Requires `OPENAI_API_KEY`. Maps `--aspect-ratio` to the nearest supported OpenAI image size (`16:9` defaults to a landscape `1536x1024` request).
+- `--provider codex` (alias `openai`): OpenAI `gpt-image-2`. Requires `OPENAI_API_KEY`. Maps `--aspect-ratio` to the nearest supported OpenAI image size (`16:9` defaults to a landscape `1536x1024` request).
 - `--provider nano-banana` (alias `gemini`): Google `gemini-3-pro-image-preview`. Requires `GOOGLE_API_KEY` (or `GEMINI_API_KEY`). Supports `--image-size 2K|4K`.
 
-If the default god-tibo-imagen call fails, slides-grab automatically falls back to whichever optional provider has credentials available; otherwise it asks you to fall back to web search + local download into `assets/`.
+If the default codex-imagen call fails, slides-grab automatically falls back to whichever optional provider has credentials available; otherwise it asks you to fall back to web search + local download into `assets/`.
 
 Run `slides-grab validate --slides-dir <path>` before export to catch missing local assets and discouraged path forms.
 
