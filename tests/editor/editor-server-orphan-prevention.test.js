@@ -26,12 +26,10 @@ async function createWorkspace() {
 }
 
 async function writeHangingMockCli(workspace, fileName) {
-  const mockPath = join(workspace, fileName);
-  const pidLogPath = join(workspace, `${fileName}.pids`);
-  const script = `#!/usr/bin/env node
+const mockPath = join(workspace, fileName);
+const pidLogPath = join(workspace, `${fileName}.pids`);
+const script = `#!/usr/bin/env node
 const fs = require('node:fs');
-fs.appendFileSync(${JSON.stringify(pidLogPath)}, String(process.pid) + '\\n');
-process.stdout.write('hanging-mock-started pid=' + process.pid + '\\n');
 process.on('SIGTERM', () => {
   fs.appendFileSync(${JSON.stringify(pidLogPath)}, 'SIGTERM:' + process.pid + '\\n');
   process.exit(143);
@@ -40,6 +38,8 @@ process.on('SIGINT', () => {
   fs.appendFileSync(${JSON.stringify(pidLogPath)}, 'SIGINT:' + process.pid + '\\n');
   process.exit(130);
 });
+fs.appendFileSync(${JSON.stringify(pidLogPath)}, String(process.pid) + '\\n');
+process.stdout.write('hanging-mock-started pid=' + process.pid + '\\n');
 setTimeout(() => {
   fs.appendFileSync(${JSON.stringify(pidLogPath)}, 'TIMEOUT_EXIT:' + process.pid + '\\n');
   process.exit(0);
