@@ -41,11 +41,24 @@ test('Korean README covers core setup and workflow in Korean', async () => {
     'npx playwright install chromium',
     'npm install slides-grab',
     'slides-grab edit',
+    'slides-grab edit-image',
     'slides-grab validate',
     'slides-grab pdf',
     'slides-grab convert',
   ]) {
     assert.match(koreanReadme, new RegExp(requiredCommand.replaceAll(' ', '\\s+')));
+  }
+});
+
+test('Korean README documents separate HTML and image-native editors', async () => {
+  const readme = await readText('README.md');
+  const koreanReadme = await readText('README-ko.md');
+
+  for (const text of [readme, koreanReadme]) {
+    assert.match(text, /slides-grab\s+edit\s+--slides-dir\s+decks\/my-deck/);
+    assert.match(text, /slides-grab\s+edit-image\s+--slides-dir\s+decks\/my-deck/);
+    assert.match(text, /slides-grab\s+edit\s+--slides-dir\s+decks\/my-cards\s+--mode\s+card-news/);
+    assert.doesNotMatch(text, /Image Regenerate/);
   }
 });
 

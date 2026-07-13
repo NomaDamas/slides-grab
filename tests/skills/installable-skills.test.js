@@ -202,6 +202,20 @@ test('slides-grab workflow reference keeps packaged stage commands and image fal
   assert.match(text, /web search/i);
 });
 
+test('installable presentation skills document disjoint HTML and image-native editor commands', () => {
+  const htmlSkill = readFileSync('skills/slides-grab-html/SKILL.md', 'utf-8');
+  const imageSkill = readFileSync('skills/slides-grab-image/SKILL.md', 'utf-8');
+  const designSkill = readFileSync('skills/slides-grab-design/SKILL.md', 'utf-8');
+
+  assert.match(htmlSkill, /slides-grab\s+edit\s+--slides-dir/);
+  assert.doesNotMatch(htmlSkill, /edit-image/);
+  assert.match(imageSkill, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.doesNotMatch(imageSkill, /Image Regenerate/);
+  assert.match(designSkill, /slides-grab\s+edit\s+--slides-dir/);
+  assert.match(designSkill, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.doesNotMatch(designSkill, /Image Regenerate/);
+});
+
 test('slides-grab orchestration skill keeps packaged style/image/video workflows without duplicate rules', () => {
   const text = readFileSync('skills/slides-grab/SKILL.md', 'utf-8');
 

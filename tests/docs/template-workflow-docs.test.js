@@ -28,17 +28,27 @@ test('English and Korean READMEs document template-following and image-native wo
   assert.match(koreanReadme, /이미지 네이티브 슬라이드는 래스터/);
 });
 
-test('skill references describe imported template packs and image-native editor regeneration', async () => {
+test('skill references describe imported template packs and separate editor commands', async () => {
   const planSkill = await readRepo('skills/slides-grab-plan/SKILL.md');
+  const htmlSkill = await readRepo('skills/slides-grab-html/SKILL.md');
+  const imageSkill = await readRepo('skills/slides-grab-image/SKILL.md');
   const designSkill = await readRepo('skills/slides-grab-design/SKILL.md');
   const workflowReference = await readRepo('skills/slides-grab/references/presentation-workflow-reference.md');
 
   assert.match(planSkill, /filled representative/i);
   assert.match(planSkill, /empty master/i);
-  assert.match(designSkill, /Image Regenerate/);
+  assert.match(htmlSkill, /slides-grab\s+edit\s+--slides-dir/);
+  assert.doesNotMatch(htmlSkill, /edit-image/);
+  assert.match(imageSkill, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.doesNotMatch(imageSkill, /Image Regenerate/);
+  assert.match(designSkill, /slides-grab\s+edit\s+--slides-dir/);
+  assert.match(designSkill, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.doesNotMatch(designSkill, /Image Regenerate/);
   assert.match(designSkill, /raster/i);
   assert.match(workflowReference, /import-template/);
-  assert.match(workflowReference, /Image Regenerate/);
+  assert.match(workflowReference, /slides-grab\s+edit\s+--slides-dir/);
+  assert.match(workflowReference, /slides-grab\s+edit-image\s+--slides-dir/);
+  assert.doesNotMatch(workflowReference, /Image Regenerate/);
 });
 
 test('template workflow fixtures cover HTML and image-native paths without external credentials', async () => {

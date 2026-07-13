@@ -74,10 +74,11 @@ npx slides-grab install-skills --target all --scope user
 
 워크플로 명령은 `--slides-dir <path>`를 지원하며 기본값은 `slides`입니다.
 
-새 클론에서는 `--help`, `list-templates`, `list-styles`, `preview-styles` 같은 탐색 명령은 덱 없이도 동작합니다. `edit`, `build-viewer`, `validate`, `png`, `design-gate`는 `slide-*.html` 파일이 들어 있는 슬라이드 작업공간이 필요하고, `convert`, `pdf`, `figma`는 추가로 최신 `Proceed` design gate가 필요합니다.
+새 클론에서는 `--help`, `list-templates`, `list-styles`, `preview-styles` 같은 탐색 명령은 덱 없이도 동작합니다. `edit`, `edit-image`, `build-viewer`, `validate`, `png`, `design-gate`는 `slide-*.html` 파일이 들어 있는 슬라이드 작업공간이 필요하고, `convert`, `pdf`, `figma`는 추가로 최신 `Proceed` design gate가 필요합니다.
 
 ```bash
-slides-grab edit              # 시각적 슬라이드 편집기 실행
+slides-grab edit              # HTML 슬라이드 편집기 실행
+slides-grab edit-image        # 이미지 네이티브 슬라이드 편집기 실행
 slides-grab build-viewer      # 단일 viewer.html 생성
 slides-grab validate          # Playwright 기반 슬라이드 HTML 검증
 slides-grab convert           # 실험적/불안정한 PPTX로 내보내기
@@ -129,7 +130,7 @@ slides-grab image \
   --provider dry-run
 ```
 
-이미지 네이티브 슬라이드는 래스터 wrapper이며 생성된 PNG 에셋을 감쌉니다. 빠른 시각 탐색이나 이미지 주도 콘셉트에는 유용하지만 HTML보다 편집 가능성이 낮습니다. 텍스트나 레이아웃을 바꾸려면 semantic HTML을 직접 수정하기보다 `slides-grab edit`의 `Image Regenerate` 모드를 다시 실행해야 하는 경우가 많습니다. 덱을 계속 쉽게 편집, 접근성 유지, 검색, 변환해야 한다면 HTML 모드를 쓰고, 시각적 구성이 후속 편집성보다 중요할 때 이미지 네이티브 모드를 쓰세요.
+이미지 네이티브 슬라이드는 래스터 wrapper이며 생성된 PNG 에셋을 감쌉니다. 빠른 시각 탐색이나 이미지 주도 콘셉트에는 유용하지만 HTML보다 편집 가능성이 낮습니다. 텍스트나 레이아웃을 바꾸려면 semantic HTML을 직접 수정하지 말고 `slides-grab edit-image --slides-dir <path>`를 사용하세요. 덱을 계속 쉽게 편집, 접근성 유지, 검색, 변환해야 한다면 HTML 모드를 쓰고, 시각적 구성이 후속 편집성보다 중요할 때 이미지 네이티브 모드를 쓰세요.
 
 OpenAI 호환 이미지 provider는 슬라이드 파일을 바꾸지 않고 설정할 수 있습니다. 예: `slides-grab image --provider codex --base-url <url> --api-key-env <ENV_NAME>`, 또는 `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, `OPENAI_BASE_URL` 환경 변수. 테스트와 fixture는 `--provider dry-run` 또는 mock provider 응답을 사용해야 하며 외부 이미지 API 자격 증명이 필요하면 안 됩니다.
 
@@ -192,6 +193,7 @@ slides-grab fetch-video \
 
 ```bash
 slides-grab edit       --slides-dir decks/my-deck
+slides-grab edit-image --slides-dir decks/my-deck
 slides-grab validate   --slides-dir decks/my-deck
 slides-grab pdf        --slides-dir decks/my-deck --output decks/my-deck.pdf
 slides-grab pdf        --slides-dir decks/my-deck --mode print --output decks/my-deck-searchable.pdf
@@ -208,7 +210,7 @@ slides-grab figma      --slides-dir decks/my-deck --output decks/my-deck-figma.p
 인스타그램식 카드뉴스는 720pt × 720pt 정사각형 프레임을 사용합니다. 모든 단계에서 `--mode card-news` 또는 `--slide-mode card-news`를 맞춰 사용하고, 최종 배포물은 `slides-grab png`를 우선 권장합니다.
 
 ```bash
-slides-grab edit     --slides-dir decks/my-cards --mode card-news
+slides-grab edit     --slides-dir decks/my-cards --mode card-news  # HTML 카드뉴스 편집기
 slides-grab validate --slides-dir decks/my-cards --mode card-news
 slides-grab png      --slides-dir decks/my-cards --slide-mode card-news --resolution 2160p
 slides-grab pdf      --slides-dir decks/my-cards --slide-mode card-news --output decks/my-cards.pdf

@@ -5,7 +5,8 @@ These are the packaged design rules for installable `slides-grab` skills.
 ## Package-first commands
 - Validate slides: `slides-grab validate --slides-dir <path>`
 - Build review viewer: `slides-grab build-viewer --slides-dir <path>`
-- Launch editor: `slides-grab edit --slides-dir <path>`
+- Launch HTML editor: `slides-grab edit --slides-dir <path>`
+- Launch image-native editor for revisions: `slides-grab edit-image --slides-dir <path>`
 - Generate a bespoke image asset: `slides-grab image --prompt "<prompt>" --slides-dir <path>` (default provider: god-tibo-imagen via `codex login` — no API key required)
 - Download a web video into slide assets: `slides-grab fetch-video --url <youtube-url> --slides-dir <path>`
 - Render `tldraw` diagrams: `slides-grab tldraw --input <path> --output <path>`

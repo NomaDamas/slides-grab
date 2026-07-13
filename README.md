@@ -82,10 +82,11 @@ There are many AI tools that generate slide HTML. Almost none let you **visually
 
 Workflow commands support `--slides-dir <path>` (default: `slides`).
 
-On a fresh clone, the discovery commands (`--help`, `list-templates`, `list-styles`, and `preview-styles`) work without a deck. `edit`, `build-viewer`, `validate`, `png`, and `design-gate` require an existing slides workspace containing `slide-*.html`; `convert`, `pdf`, and `figma` additionally require a fresh `Proceed` design gate.
+On a fresh clone, the discovery commands (`--help`, `list-templates`, `list-styles`, and `preview-styles`) work without a deck. `edit`, `edit-image`, `build-viewer`, `validate`, `png`, and `design-gate` require an existing slides workspace containing `slide-*.html`; `convert`, `pdf`, and `figma` additionally require a fresh `Proceed` design gate.
 
 ```bash
-slides-grab edit              # Launch visual slide editor
+slides-grab edit              # Launch HTML slide editor
+slides-grab edit-image        # Launch image-native slide editor
 slides-grab build-viewer      # Build single-file viewer.html
 slides-grab validate          # Validate slide HTML (Playwright-based)
 slides-grab convert           # Export to experimental / unstable PPTX
@@ -139,7 +140,7 @@ slides-grab image \
   --provider dry-run
 ```
 
-Image-native slides are raster wrappers around generated PNG assets. They are useful for fast visual exploration or image-led concepts, but they are less editable than HTML: text and layout changes usually require `Image Regenerate` in `slides-grab edit`, not direct semantic HTML edits. Use HTML mode when the deck must remain highly editable, accessible, searchable, or easy to convert; use image-native mode when visual composition matters more than downstream editability.
+Image-native slides are raster wrappers around generated PNG assets. They are useful for fast visual exploration or image-led concepts, but they are less editable than HTML: revise them with `slides-grab edit-image --slides-dir <path>`, not direct semantic HTML edits. Use HTML mode when the deck must remain highly editable, accessible, searchable, or easy to convert; use image-native mode when visual composition matters more than downstream editability.
 
 OpenAI-compatible image providers can be configured without changing slide files: `slides-grab image --provider codex --base-url <url> --api-key-env <ENV_NAME>`, or environment variables `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, and `OPENAI_BASE_URL`. Tests and fixtures should use `--provider dry-run` or mocked provider responses and must not require external image API credentials.
 
@@ -201,6 +202,7 @@ Prerequisite: create or generate a deck in `decks/my-deck/` first.
 
 ```bash
 slides-grab edit       --slides-dir decks/my-deck
+slides-grab edit-image --slides-dir decks/my-deck
 slides-grab validate   --slides-dir decks/my-deck
 slides-grab pdf        --slides-dir decks/my-deck --output decks/my-deck.pdf
 slides-grab pdf        --slides-dir decks/my-deck --mode print --output decks/my-deck-searchable.pdf
@@ -217,7 +219,7 @@ slides-grab figma      --slides-dir decks/my-deck --output decks/my-deck-figma.p
 Instagram-style card news uses a 720pt × 720pt frame end-to-end. Pass `--mode card-news` (or `--slide-mode card-news` for `pdf`/`png`) at every stage and prefer `slides-grab png` as the primary export so each card becomes an Instagram-ready PNG.
 
 ```bash
-slides-grab edit     --slides-dir decks/my-cards --mode card-news
+slides-grab edit     --slides-dir decks/my-cards --mode card-news  # HTML card-news editor
 slides-grab validate --slides-dir decks/my-cards --mode card-news
 slides-grab png      --slides-dir decks/my-cards --slide-mode card-news --resolution 2160p
 # Optional extras (PPTX / Figma remain experimental / unstable)

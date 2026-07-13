@@ -63,7 +63,7 @@ Use the installed **slides-grab-plan** skill with image-native outline density r
    ```
 4. Run `slides-grab validate --slides-dir <path>`. Auto-fix failures until it passes.
 5. Run the design gate (`../slides-grab-design/references/design-gate.md`): capture PNG evidence, run Pass A + Pass B, synthesize verdict. Resolve all Critical findings, re-generate the failing slide, re-render, re-review until `Proceed`. Record with `slides-grab design-gate --slides-dir <path> --verdict proceed --pass-a-report <a.md> --pass-b-report <b.md>`.
-6. For revisions, regenerate the specific slide with `slides-grab image` (same `--reference`, adjusted `--prompt`), or use the editor's Image Regenerate mode.
+6. For revisions, regenerate the specific slide with `slides-grab image` (same `--reference`, adjusted `--prompt`), or launch the image-native editor with `slides-grab edit-image --slides-dir <path>`.
 
 ### Stage 3 — Export
 Use the installed **slides-grab-export** skill. Requires a fresh `Proceed` gate receipt.

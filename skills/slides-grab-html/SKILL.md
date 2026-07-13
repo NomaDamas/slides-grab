@@ -39,7 +39,7 @@ Use the installed **slides-grab-design** skill.
 8. **Icons**: prefer Lucide before emoji.
 9. Run `slides-grab validate --slides-dir <path>`. Auto-fix failures until it passes.
 10. Run the design gate (`../slides-grab-design/references/design-gate.md`): capture PNG evidence, run Pass A (System Contract) + Pass B (Audience Impact), synthesize verdict. Resolve all Critical findings, re-render, re-review until `Proceed`. Record with `slides-grab design-gate --slides-dir <path> --verdict proceed --pass-a-report <a.md> --pass-b-report <b.md>`.
-11. Launch the editor: `slides-grab edit --slides-dir <path>`. For chart decks, also run `slides-grab build-viewer` and confirm charts render in `viewer.html`.
+11. Launch the HTML editor: `slides-grab edit --slides-dir <path>`. For chart decks, also run `slides-grab build-viewer` and confirm charts render in `viewer.html`.
 
 ### Stage 3 — Export
 Use the installed **slides-grab-export** skill. Requires a fresh `Proceed` gate receipt.
