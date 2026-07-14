@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 import { loadTemplatePackFromSlidesDir, parseTemplatePack } from './template-pack.js';
@@ -242,9 +243,9 @@ export async function writeImageNativeSlideWrapper({
   return { slideFile, metadataFile: metadataRef, metadata };
 }
 
-async function defaultGenerateImage({ prompt, provider, model, env = process.env, baseUrl = '', fetchImpl = globalThis.fetch }) {
+async function defaultGenerateImage({ prompt, provider, model, env = process.env, baseUrl = '', fetchImpl = globalThis.fetch, referenceImages = [] }) {
   if (provider === IMAGE_PROVIDER_CODEX) {
-    return generateCodexImage({ prompt, model: model || DEFAULT_CODEX_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO });
+    return generateCodexImage({ prompt, model: model || DEFAULT_CODEX_MODEL, aspectRatio: DEFAULT_NANO_BANANA_ASPECT_RATIO, referenceImages });
   }
   if (provider === IMAGE_PROVIDER_OPENAI) {
     const { apiKey } = resolveOpenaiApiKey(env);
@@ -383,10 +384,11 @@ function buildRegenerationPrompt({ metadata, prompt, selections = [] }) {
     .join('\n');
   return [
     'Regenerate this existing image-native slide as a complete replacement full-slide image.',
+    'The original image is provided as a reference input — preserve its overall layout, style, and content, but apply the user critique to the specified regions (or the whole slide if no regions are selected).',
     'Keep the original slide intent and template constraints, but apply the user critique.',
     '',
     `User critique: ${prompt}`,
-    boxes ? `Selected bbox feedback regions (slide coordinate space):\n${boxes}` : 'Selected bbox feedback regions: none.',
+    boxes ? `Selected bbox feedback regions (slide coordinate space):\n${boxes}` : 'Selected bbox feedback regions: none (apply the critique to the whole slide).',
     '',
     'Original generation prompt:',
     metadata.prompt,
@@ -427,12 +429,14 @@ export async function regenerateImageNativeSlide({
   const regenerationPrompt = buildRegenerationPrompt({ metadata, prompt: prompt.trim(), selections });
   throwIfImageRegenerationAborted(signal);
 
+  const assetPath = join(absoluteSlidesDir, metadata.assetRef.replace(/^\.\//, ''));
+  const referenceImages = existsSync(assetPath) ? [assetPath] : [];
+
   const generated = generateImageImpl
     ? await generateImageImpl({ prompt: regenerationPrompt, metadata, selections, provider: normalizedProvider, model: resolvedModel })
-    : await defaultGenerateImage({ prompt: regenerationPrompt, provider: normalizedProvider, model: resolvedModel, env, baseUrl, fetchImpl });
+    : await defaultGenerateImage({ prompt: regenerationPrompt, provider: normalizedProvider, model: resolvedModel, env, baseUrl, fetchImpl, referenceImages });
   throwIfImageRegenerationAborted(signal);
 
-  const assetPath = join(absoluteSlidesDir, metadata.assetRef.replace(/^\.\//, ''));
   await writeFile(assetPath, generated.bytes);
 
   const historyEntry = {
