@@ -143,7 +143,7 @@ slides-grab image \
 
 Image-native slides are raster wrappers around generated PNG assets. They are useful for fast visual exploration or image-led concepts, but they are less editable than HTML: revise them with `slides-grab edit-image --slides-dir <path>`, not direct semantic HTML edits. Use HTML mode when the deck must remain highly editable, accessible, searchable, or easy to convert; use image-native mode when visual composition matters more than downstream editability.
 
-OpenAI-compatible image providers can be configured without changing slide files: `slides-grab image --provider codex --base-url <url> --api-key-env <ENV_NAME>`, or environment variables `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, and `OPENAI_BASE_URL`. Tests and fixtures should use mocked provider responses (injected `generateImageImpl` or `PPT_AGENT_MOCK_IMAGE_PROVIDER=1` for the editor server) and must not require external image API credentials.
+OpenAI-compatible image providers can be configured without changing slide files: `slides-grab image --provider openai --base-url <url> --api-key-env <ENV_NAME>`, or environment variables `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, and `OPENAI_BASE_URL`. Tests and fixtures should use mocked provider responses (injected `generateImageImpl` or `PPT_AGENT_MOCK_IMAGE_PROVIDER=1` for the editor server) and must not require external image API credentials.
 
 ## Asset Contract
 
@@ -169,7 +169,7 @@ The command saves the result into `<slides-dir>/assets/` and prints the portable
 
 Optional alternative providers via `--provider`:
 
-- `--provider codex` (alias `openai`): OpenAI `gpt-image-2`. Requires `OPENAI_API_KEY`. Maps `--aspect-ratio` to the nearest supported OpenAI image size (`16:9` defaults to a landscape `1536x1024` request).
+- `--provider openai`: OpenAI `gpt-image-2`. Requires `OPENAI_API_KEY`. Maps `--aspect-ratio` to the nearest supported OpenAI image size (`16:9` defaults to a landscape `1536x1024` request).
 - `--provider nano-banana` (alias `gemini`): Google `gemini-3-pro-image-preview`. Requires `GOOGLE_API_KEY` (or `GEMINI_API_KEY`). Supports `--image-size 2K|4K`.
 
 If the default codex-imagen call fails, slides-grab automatically falls back to whichever optional provider has credentials available; otherwise it asks you to fall back to web search + local download into `assets/`.

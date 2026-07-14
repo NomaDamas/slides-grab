@@ -133,7 +133,7 @@ slides-grab image \
 
 이미지 네이티브 슬라이드는 래스터 wrapper이며 생성된 PNG 에셋을 감쌉니다. 빠른 시각 탐색이나 이미지 주도 콘셉트에는 유용하지만 HTML보다 편집 가능성이 낮습니다. 텍스트나 레이아웃을 바꾸려면 semantic HTML을 직접 수정하지 말고 `slides-grab edit-image --slides-dir <path>`를 사용하세요. 덱을 계속 쉽게 편집, 접근성 유지, 검색, 변환해야 한다면 HTML 모드를 쓰고, 시각적 구성이 후속 편집성보다 중요할 때 이미지 네이티브 모드를 쓰세요.
 
-OpenAI 호환 이미지 provider는 슬라이드 파일을 바꾸지 않고 설정할 수 있습니다. 예: `slides-grab image --provider codex --base-url <url> --api-key-env <ENV_NAME>`, 또는 `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, `OPENAI_BASE_URL` 환경 변수. 테스트와 fixture는 mock provider 응답(주입된 `generateImageImpl` 또는 에디터 서버의 `PPT_AGENT_MOCK_IMAGE_PROVIDER=1`)을 사용해야 하며 외부 이미지 API 자격 증명이 필요하면 안 됩니다.
+OpenAI 호환 이미지 provider는 슬라이드 파일을 바꾸지 않고 설정할 수 있습니다. 예: `slides-grab image --provider openai --base-url <url> --api-key-env <ENV_NAME>`, 또는 `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, `OPENAI_BASE_URL` 환경 변수. 테스트와 fixture는 mock provider 응답(주입된 `generateImageImpl` 또는 에디터 서버의 `PPT_AGENT_MOCK_IMAGE_PROVIDER=1`)을 사용해야 하며 외부 이미지 API 자격 증명이 필요하면 안 됩니다.
 
 ## 에셋 규칙
 
@@ -161,7 +161,7 @@ codex login
 slides-grab image --slides-dir decks/my-deck --prompt "Editorial hero image of a robotics warehouse at dawn"
 ```
 
-기본 이미지 생성 공급자는 로컬 Codex ChatGPT 로그인(`~/.codex/auth.json`)을 재사용할 수 있습니다. 선택적으로 `--provider codex`에는 `OPENAI_API_KEY`, `--provider nano-banana`에는 `GOOGLE_API_KEY` 또는 `GEMINI_API_KEY`가 필요할 수 있습니다.
+기본 이미지 생성 공급자는 로컬 Codex ChatGPT 로그인(`~/.codex/auth.json`)을 재사용할 수 있습니다. 선택적으로 `--provider openai`에는 `OPENAI_API_KEY`, `--provider nano-banana`에는 `GOOGLE_API_KEY` 또는 `GEMINI_API_KEY`가 필요할 수 있습니다.
 
 > 경고: 일부 이미지 생성 경로는 지원되지 않는 비공개 백엔드 또는 계정 권한에 의존할 수 있으므로, 실패하면 웹 검색과 로컬 다운로드 방식으로 대체하세요.
 

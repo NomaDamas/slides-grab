@@ -54,7 +54,7 @@ Use the installed **slides-grab-plan** skill with image-native outline density r
    - `--reference` for any real photos to embed (member photos, product shots, logos)
    - `--slides-dir <path>` and `--name slide-XX` (so the output is `assets/slide-XX.png`)
    - `--image-native` so the command also writes the editor-compatible `slide-XX.html` wrapper and `.slides-grab/image-native/slide-XX.json` regeneration metadata
-   - `--provider god-tibo` (default; reuses `~/.codex/auth.json`, run `codex login` once, no API key). Alternatives: `--provider codex` (OPENAI_API_KEY), `--provider nano-banana` (GOOGLE_API_KEY/GEMINI_API_KEY).
+   - `--provider codex` (default; reuses `~/.codex/auth.json`, run `codex login` once, no API key). Alternatives: `--provider openai` (OPENAI_API_KEY, gpt-image-2), `--provider nano-banana` (GOOGLE_API_KEY/GEMINI_API_KEY).
 3. Confirm each command reports `Created image-native slide wrapper: slide-XX.html`. Do not hand-write the wrapper; `--image-native` keeps the PNG, wrapper, and regeneration metadata contract aligned for `slides-grab edit-image`.
 4. Run `slides-grab validate --slides-dir <path>`. Auto-fix failures until it passes.
 5. Run the design gate (`../slides-grab-design/references/design-gate.md`): capture PNG evidence, run Pass A + Pass B, synthesize verdict. Resolve all Critical findings, re-generate the failing slide, re-render, re-review until `Proceed`. Record with `slides-grab design-gate --slides-dir <path> --verdict proceed --pass-a-report <a.md> --pass-b-report <b.md>`.
