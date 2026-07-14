@@ -27,10 +27,13 @@ async function createHtmlWorkspace() {
   return workspace;
 }
 
-async function createImageWorkspace() {
+async function createImageWorkspace(slideCount = 1) {
   const workspace = await mkdtemp(join(os.tmpdir(), 'editor-client-image-'));
   const outlinePath = join(workspace, 'slide-outline.md');
-  await writeFile(outlinePath, '# Demo\n\n## Slide 1: Hero\n- Fact: image editor\n', 'utf8');
+  const slides = Array.from({ length: slideCount }, (_, index) =>
+    `## Slide ${index + 1}: Hero ${index + 1}\n- Fact: image editor ${index + 1}`
+  ).join('\n\n');
+  await writeFile(outlinePath, `# Demo\n\n${slides}\n`, 'utf8');
   await generateImageNativeSlides({ outlinePath, slidesDir: join(workspace, 'slides'), provider: 'codex', generateImageImpl: async () => ({ mimeType: 'image/png', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64') }) });
   return workspace;
 }
@@ -247,6 +250,117 @@ test('image editor sends provider-only image payloads with empty XPath targets',
       targets: [],
     });
   } finally {
+    if (browser) await browser.close().catch(() => {});
+    await stopChild(server.child);
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test('image editor refreshes the displayed image after regeneration completes', { concurrency: false }, async () => {
+  const workspace = await createImageWorkspace();
+  const port = await getAvailablePort();
+  const server = spawnEditorServer(workspace, port, 'image');
+  let browser;
+
+  try {
+    await waitForServerReady(port, server.child, server.output);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    const imageRequests = [];
+    page.on('request', (request) => {
+      if (/\/slides\/assets\/slide-01\.png(?:\?|$)/.test(request.url())) {
+        imageRequests.push(request.url());
+      }
+    });
+    await page.route('**/api/apply', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          runId: 'image-refresh-run',
+          mode: 'image',
+          message: 'Image regeneration completed.',
+          image: {
+            slideFile: 'slide-01.html',
+            assetRef: './assets/slide-01.png',
+          },
+        }),
+      });
+    });
+    await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => /1\s*\/\s*1/.test(document.querySelector('#slide-counter')?.textContent || ''));
+
+    const image = page.frameLocator('#slide-iframe').locator('img.slide-image');
+    await image.waitFor();
+    const initialSrc = await image.getAttribute('src');
+
+    await page.selectOption('#image-provider-select', 'nano-banana');
+    await drawBbox(page);
+    await page.fill('#prompt-input', 'Regenerate this image region.');
+    await page.click('#btn-send');
+    await page.waitForFunction(() => /Image regeneration completed/i.test(document.querySelector('#status-message')?.textContent || ''));
+
+    const refreshedSrc = await image.getAttribute('src');
+    assert.notEqual(refreshedSrc, initialSrc);
+    assert.equal(new URL(refreshedSrc, `http://localhost:${port}/slides/slide-01.html`).pathname, '/slides/assets/slide-01.png');
+    assert.ok(new URL(refreshedSrc, `http://localhost:${port}/slides/slide-01.html`).searchParams.has('refresh'));
+    assert.equal(imageRequests.length, 2);
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+    await stopChild(server.child);
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test('image regeneration does not replace a different slide after navigation', { concurrency: false }, async () => {
+  const workspace = await createImageWorkspace(2);
+  const port = await getAvailablePort();
+  const server = spawnEditorServer(workspace, port, 'image');
+  let browser;
+  let releaseApply = () => {};
+
+  try {
+    await waitForServerReady(port, server.child, server.output);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    let markApplyRequested = () => {};
+    const applyRequested = new Promise((resolve) => { markApplyRequested = resolve; });
+    const applyGate = new Promise((resolve) => { releaseApply = resolve; });
+    await page.route('**/api/apply', async (route) => {
+      markApplyRequested();
+      await applyGate;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          runId: 'image-navigation-run',
+          mode: 'image',
+          message: 'Image regeneration completed.',
+          image: {
+            slideFile: 'slide-01.html',
+            assetRef: './assets/slide-01.png',
+          },
+        }),
+      });
+    });
+    await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => /1\s*\/\s*2/.test(document.querySelector('#slide-counter')?.textContent || ''));
+
+    await drawBbox(page);
+    await page.fill('#prompt-input', 'Regenerate the first slide.');
+    await page.click('#btn-send');
+    await applyRequested;
+    await page.click('#btn-next');
+    await page.waitForFunction(() => /2\s*\/\s*2/.test(document.querySelector('#slide-counter')?.textContent || ''));
+    releaseApply();
+    await page.waitForFunction(() => /Image regeneration completed/i.test(document.querySelector('#status-message')?.textContent || ''));
+
+    const currentImageSrc = await page.frameLocator('#slide-iframe').locator('img.slide-image').getAttribute('src');
+    assert.equal(currentImageSrc, './assets/slide-02.png');
+  } finally {
+    releaseApply();
     if (browser) await browser.close().catch(() => {});
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });

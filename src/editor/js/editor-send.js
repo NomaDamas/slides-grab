@@ -1,7 +1,7 @@
 // editor-send.js — API submission (applyChanges), updateSendState
 
 import { state, runsById, activeRunBySlide, pendingRequestBySlide } from './editor-state.js';
-import { slideStatusChip, btnSend, btnClearBboxes, promptInput, imageProviderSelect } from './editor-dom.js';
+import { slideIframe, slideStatusChip, btnSend, btnClearBboxes, promptInput, imageProviderSelect } from './editor-dom.js';
 import { currentSlideFile, getSlideState, getLatestRunForSlide, normalizeBoxStatus, normalizeModelName, setStatus } from './editor-utils.js';
 import { addChatMessage, renderRunsList } from './editor-chat.js';
 import { renderBboxes, extractTargetsForBox } from './editor-bbox.js';
@@ -140,6 +140,15 @@ export async function applyChanges() {
     );
 
     if (data.success) {
+      if (editorClient.usesImageProvider && data.image?.assetRef && slide === currentSlideFile()) {
+        const slideImage = slideIframe?.contentDocument?.querySelector('img.slide-image');
+        if (slideImage) {
+          const refreshedImageUrl = new URL(data.image.assetRef, slideIframe.contentWindow.location.href);
+          refreshedImageUrl.searchParams.set('refresh', Date.now().toString());
+          slideImage.src = refreshedImageUrl.href;
+        }
+      }
+
       let marked = 0;
       for (const box of ss.boxes) {
         if (submittedSet.has(box.id) && normalizeBoxStatus(box.status) === 'pending') {
