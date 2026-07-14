@@ -47,7 +47,8 @@ export function updateSendState() {
   const model = editorClient.usesModel ? normalizeModelName(ss.model) : '';
 
   state.imageProvider = imageProviderSelect?.value || 'codex';
-  btnSend.disabled = !prompt || pendingCount === 0 || blocked || (editorClient.usesModel && !model);
+  const requiresBbox = !editorClient.usesImageProvider;
+  btnSend.disabled = !prompt || (requiresBbox && pendingCount === 0) || blocked || (editorClient.usesModel && !model);
   btnClearBboxes.disabled = ss.boxes.length === 0 || blocked;
   updateSlideStatusChip();
 }
@@ -68,7 +69,7 @@ export async function applyChanges() {
   const imageProvider = imageProviderSelect?.value || 'codex';
   state.imageProvider = imageProvider;
   if (!prompt) return;
-  if (pendingBoxes.length === 0) {
+  if (!editorClient.usesImageProvider && pendingBoxes.length === 0) {
     setStatus('No pending (red) bbox to run. Draw a new box or click Rerun on a green box.');
     return;
   }

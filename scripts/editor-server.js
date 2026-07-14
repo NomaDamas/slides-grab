@@ -366,8 +366,9 @@ function sanitizeTargets(rawTargets) {
     .filter((target) => target.xpath);
 }
 
-function normalizeSelections(rawSelections, slideSize) {
+function normalizeSelections(rawSelections, slideSize, { allowEmpty = false } = {}) {
   if (!Array.isArray(rawSelections) || rawSelections.length === 0) {
+    if (allowEmpty) return [];
     throw new Error('At least one selection is required.');
   }
 
@@ -846,7 +847,11 @@ async function startServer(opts) {
 
     let normalizedSelections;
     try {
-      normalizedSelections = normalizeSelections(selections, getSlideModeConfig(opts.mode).framePx);
+      normalizedSelections = normalizeSelections(
+        selections,
+        getSlideModeConfig(opts.mode).framePx,
+        { allowEmpty: opts.editor === 'image' },
+      );
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
