@@ -1,5 +1,9 @@
 import { dirname, join, resolve } from 'node:path';
 
+import motionContract from './motion-contract.cjs';
+
+const { MOTION_RUNTIME_HTML } = motionContract;
+
 const ABSOLUTE_FILESYSTEM_PATH_RE = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
 const SCHEME_RE = /^[a-z][a-z0-9+\-.]*:/i;
 const CSS_URL_RE = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
@@ -170,6 +174,8 @@ export function buildSlideRuntimeHtml(html, { baseHref, slideFile }) {
   if (baseHref && !/<base\b/i.test(html)) {
     snippets.push(`<base data-slides-grab-runtime="base" href="${baseHref}">`);
   }
+
+  snippets.push(MOTION_RUNTIME_HTML);
 
   const script = `<script data-slides-grab-runtime="diagnostics">
 (() => {

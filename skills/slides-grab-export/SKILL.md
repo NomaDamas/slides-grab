@@ -31,13 +31,14 @@ Convert reviewed slide HTML into PDF or per-slide PNG reliably, and into experim
    - `slides-grab pdf --slides-dir <path> --output <name>.pdf`
    - Add `--slide-mode card-news` when the deck is square.
 5. For decks with Chart.js or other `<canvas>` charts, confirm `slides-grab validate --slides-dir <path>` passes without `empty-canvas`, then build/open `viewer.html` once before export. Chart.js charts should use disabled animation so PDF/PNG capture sees the final painted state.
-6. If the user wants PPTX (experimental / unstable):
+6. For decks with `[data-motion-root]`, confirm the viewer activates only the visible slide and that PNG, PDF, and raster PPTX all show the same authored final static state. Export never captures an animation midpoint.
+7. If the user wants PPTX (experimental / unstable):
    - Default visual-fidelity export: `slides-grab convert --slides-dir <path> --output <name>.pptx --engine raster`
    - Editable-text export: `slides-grab convert --slides-dir <path> --output <name>-editable.pptx --engine text`
    - `--resolution` can only be used with the raster engine. The text engine requires semantic text tags, rasterizes canvas/SVG visuals, and may reject unsupported HTML/CSS.
-7. If the user wants Figma-importable PPTX (experimental / unstable):
+8. If the user wants Figma-importable PPTX (experimental / unstable):
    - `slides-grab figma --slides-dir <path> --output <name>-figma.pptx`
-8. Report success/failure with actionable errors.
+9. Report success/failure with actionable errors.
 
 ## Rules
 - Do not export while any **Critical** design-gate finding is unresolved (`../slides-grab-design/references/design-gate.md`). The design gate is a hard precondition for this stage, and `slides-grab pdf`, `slides-grab convert`, and `slides-grab figma` block if the latest receipt is missing or stale.

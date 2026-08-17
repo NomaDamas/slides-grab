@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const { gotoStaticSlide } = require('./motion-contract.cjs');
 
 const {
   getResolutionChoices,
@@ -195,7 +196,7 @@ async function convertSlide(htmlFile, pres, browser, options = {}) {
   const fallbackSize = getSlideModeConfig(slideMode).framePx;
 
   const page = await browser.newPage(buildPageOptions(options.resolution, slideMode));
-  await page.goto(`file://${filePath}`);
+  await gotoStaticSlide(page, `file://${filePath}`, fs.readFileSync(filePath, 'utf8'));
 
   const bodyDimensions = await page.evaluate(() => {
     const body = document.body;

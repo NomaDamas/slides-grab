@@ -345,12 +345,26 @@ ${slides.map((s, i) => `        <iframe class="slide-frame${i === 0 ? ' active' 
     const scaler = document.getElementById('scaler');
     const viewport = document.getElementById('viewport');
 
+    function sendLifecycle(frame, message) {
+      frame.contentWindow?.postMessage(message, '*');
+    }
+
+    function syncFrame(frame, index) {
+      sendLifecycle(frame, index + 1 === current ? 'slides-grab:activate' : 'slides-grab:deactivate');
+    }
+
+    frames.forEach((frame, index) => {
+      frame.addEventListener('load', () => syncFrame(frame, index));
+    });
+
     function goTo(n) {
       n = Math.max(1, Math.min(TOTAL, n));
       if (n === current) return;
+      sendLifecycle(frames[current - 1], 'slides-grab:deactivate');
       frames[current - 1].classList.remove('active');
       current = n;
       frames[current - 1].classList.add('active');
+      sendLifecycle(frames[current - 1], 'slides-grab:activate');
       counter.textContent = current + ' / ' + TOTAL;
       btnPrev.disabled = current === 1;
       btnNext.disabled = current === TOTAL;
@@ -362,6 +376,7 @@ ${slides.map((s, i) => `        <iframe class="slide-frame${i === 0 ? ' active' 
     btnPrev.addEventListener('click', prev);
     btnNext.addEventListener('click', next);
     btnPrev.disabled = true;
+    frames.forEach(syncFrame);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }

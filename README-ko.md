@@ -98,6 +98,29 @@ slides-grab list-styles       # 기본으로 선택 가능한 92개 디자인 �
 slides-grab preview-styles    # 95개 스타일 미리보기 갤러리를 브라우저에서 열기
 ```
 
+### 슬라이드 모션 lifecycle
+
+시간 순서, 누적, 전파, 상태 변화의 이해를 실제로 돕는 경우에만 모션을 사용합니다. 원본 HTML은 완결된 최종 정적 상태로 작성하고, 움직이는 영역에 `data-motion-root`를 붙인 뒤 공개 active class가 있을 때만 CSS animation을 시작합니다.
+
+```html
+<div data-motion-root>
+  <div class="event-token"></div>
+</div>
+
+<style>
+  .event-token { transform: translateX(240px); }
+  [data-motion-root].slides-grab-motion-active .event-token {
+    animation: deliver 2s ease-out infinite;
+  }
+  @keyframes deliver {
+    from { transform: translateX(0); }
+    to { transform: translateX(240px); }
+  }
+</style>
+```
+
+`viewer.html`은 보이는 iframe만 활성화하고, 이전 슬라이드는 비활성화하며, 재진입하면 CSS animation을 처음부터 다시 시작합니다. PNG, PDF, raster PPTX는 슬라이드를 `data-motion="static"` 상태로 로드하고 animation과 transition을 끄므로 작성된 최종 상태를 캡처합니다. reduced-motion과 print도 정적 상태를 유지합니다. 슬라이드마다 lifecycle JavaScript를 복사하지 마세요.
+
 ## 디자인 스타일 모음
 
 slides-grab은 [corazzon/pptx-design-styles](https://github.com/corazzon/pptx-design-styles)에서 파생된 30개 스타일, slides-grab 고유 스타일 5개, [epoko77-ai/design-diversity](https://github.com/epoko77-ai/design-diversity)에서 파생된 PPT 팩 60개를 포함해 총 95개 디자인 스타일을 제공합니다. 60개 design-diversity PPT 팩은 분류됩니다 — 직접 중복은 빌트인에 앨리어스 처리(기본 숨김)되고, 유사 중복은 `relatedStyleIds`로 연결되며, 완전히 새 팩은 추가됩니다. 따라서 92개만 기본으로 선택 가능하며 95개 모두 해석 가능합니다(`list-styles --all`로 앨리어스 확인). 에이전트에게 특정 스타일을 요청하거나 완전히 커스텀 디자인을 요청할 수 있습니다.

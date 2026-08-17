@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, readdir } from 'node:fs/promises';
+import { mkdir, readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -20,6 +20,7 @@ const {
   getSlideModeConfig,
   normalizeSlideMode,
 } = require('../src/slide-mode.cjs');
+const { gotoStaticSlide } = require('../src/motion-contract.cjs');
 
 const DEFAULT_SLIDES_DIR = 'slides';
 const DEFAULT_RESOLUTION = '2160p';
@@ -158,8 +159,9 @@ async function discoverSlideFiles(slidesDir) {
 }
 
 async function renderSlideToPng(page, slidesDir, slideFile, outputPath) {
-  const url = pathToFileURL(join(slidesDir, slideFile)).href;
-  await page.goto(url, { waitUntil: 'load' });
+  const slidePath = join(slidesDir, slideFile);
+  const url = pathToFileURL(slidePath).href;
+  await gotoStaticSlide(page, url, await readFile(slidePath, 'utf8'));
   await page.evaluate(async () => {
     if (document.fonts?.ready) {
       await document.fonts.ready;

@@ -106,6 +106,29 @@ slides-grab list-styles       # Show 92 selectable design styles by default (95 
 slides-grab preview-styles                        # Open the 95-style visual gallery in browser
 ```
 
+### Slide motion lifecycle
+
+Use motion only when it explains sequence, accumulation, propagation, or state change. Keep the source HTML complete in its final static state, mark the animated region with `data-motion-root`, and start CSS animation only from the public active class:
+
+```html
+<div data-motion-root>
+  <div class="event-token"></div>
+</div>
+
+<style>
+  .event-token { transform: translateX(240px); }
+  [data-motion-root].slides-grab-motion-active .event-token {
+    animation: deliver 2s ease-out infinite;
+  }
+  @keyframes deliver {
+    from { transform: translateX(0); }
+    to { transform: translateX(240px); }
+  }
+</style>
+```
+
+`viewer.html` activates only the visible iframe, deactivates the previous one, and restarts CSS animation on re-entry. PNG, PDF, and raster PPTX exports load the slide with `data-motion="static"` and disable animation and transition, so they always capture the authored final state. Reduced-motion and print rendering also stay static. Do not copy lifecycle JavaScript into individual slides.
+
 ## Design Style Collections
 
 slides-grab bundles 95 design styles: 30 derived from [corazzon/pptx-design-styles](https://github.com/corazzon/pptx-design-styles), 5 slides-grab originals, and 60 PPT packs derived from [epoko77-ai/design-diversity](https://github.com/epoko77-ai/design-diversity). The 60 design-diversity PPT packs are classified — direct duplicates are aliased to builtins (hidden by default), near-duplicates are linked via `relatedStyleIds`, and net-new packs are added — so 92 are selectable by default while all 95 remain resolvable (use `list-styles --all` to see aliases). Agents can also create fully custom designs beyond the bundled collection.

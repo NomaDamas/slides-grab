@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -22,6 +22,7 @@ const {
   getSlideModeConfig,
   normalizeSlideMode,
 } = require('../src/slide-mode.cjs');
+const { gotoStaticSlide } = require('../src/motion-contract.cjs');
 
 const DEFAULT_OUTPUT = 'slides.pdf';
 const DEFAULT_SLIDES_DIR = 'slides';
@@ -667,7 +668,7 @@ export async function renderSlideToPdf(page, slideFile, slidesDir, options = {})
   const slideMode = normalizeSlideMode(options.slideMode ?? DEFAULT_SLIDE_MODE, { optionName: '--slide-mode' });
   const captureResolution = mode === 'capture' ? normalizeResolutionPreset(options.resolution ?? '') : '';
 
-  await page.goto(slideUrl, { waitUntil: 'load' });
+  await gotoStaticSlide(page, slideUrl, await readFile(slidePath, 'utf8'));
   await waitForSlideRenderReady(page, options);
 
   const slideFrame = await detectSlideFrame(page, slideMode);
