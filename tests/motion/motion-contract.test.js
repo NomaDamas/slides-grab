@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import test from 'node:test';
+import test, { after, before } from 'node:test';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 
@@ -16,6 +16,15 @@ import { extractZipEntry } from '../helpers/figma-fixtures.js';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../..');
 const ACTIVE_CLASS = 'slides-grab-motion-active';
+let browser;
+
+before(async () => {
+  browser = await chromium.launch({ headless: true });
+});
+
+after(async () => {
+  await browser?.close();
+});
 
 function viewerSlideHtml(label) {
   return `<!doctype html>
@@ -136,7 +145,7 @@ async function writeStaticDeck(root) {
 test('viewer activates only the current slide and restarts motion on re-entry', { concurrency: false }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'slides-grab-motion-viewer-'));
   const slidesDir = path.join(root, 'slides');
-  let browser;
+  const context = await browser.newContext();
 
   try {
     await mkdir(slidesDir);
@@ -146,8 +155,7 @@ test('viewer activates only the current slide and restarts motion on re-entry', 
     ]);
     await writeFile(path.join(slidesDir, 'viewer.html'), buildViewerHtml(loadSlides(slidesDir)));
 
-    browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    const page = await context.newPage();
     await page.goto(pathToFileURL(path.join(slidesDir, 'viewer.html')).href, { waitUntil: 'load' });
 
     const first = page.frameLocator('.slide-frame').nth(0).locator('[data-motion-root]');
@@ -163,7 +171,7 @@ test('viewer activates only the current slide and restarts motion on re-entry', 
     await waitForMotionState(first, true, 2);
     await waitForMotionState(second, false, 1);
   } finally {
-    if (browser) await browser.close();
+    await context.close();
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -171,15 +179,13 @@ test('viewer activates only the current slide and restarts motion on re-entry', 
 test('viewer keeps the complete static state when reduced motion is requested', { concurrency: false }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'slides-grab-motion-reduced-'));
   const slidesDir = path.join(root, 'slides');
-  let browser;
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
 
   try {
     await mkdir(slidesDir);
     await writeFile(path.join(slidesDir, 'slide-01.html'), reducedMotionSlideHtml());
     await writeFile(path.join(slidesDir, 'viewer.html'), buildViewerHtml(loadSlides(slidesDir)));
 
-    browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await context.newPage();
     await page.goto(pathToFileURL(path.join(slidesDir, 'viewer.html')).href, { waitUntil: 'load' });
 
@@ -190,7 +196,7 @@ test('viewer keeps the complete static state when reduced motion is requested', 
       'none',
     );
   } finally {
-    if (browser) await browser.close();
+    await context.close();
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -216,12 +222,11 @@ test('PNG export enters static motion mode before slide JavaScript runs', { conc
 
 test('PDF capture enters static motion mode before slide JavaScript runs', { concurrency: false }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'slides-grab-motion-pdf-'));
-  let browser;
+  const context = await browser.newContext();
 
   try {
     const slidesDir = await writeStaticDeck(root);
-    browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    const page = await context.newPage();
     const result = await renderSlideToPdf(page, 'slide-01.html', slidesDir, {
       mode: 'capture',
       resolution: '720p',
@@ -230,7 +235,7 @@ test('PDF capture enters static motion mode before slide JavaScript runs', { con
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motionAtLoad), 'static');
     assert.deepEqual(await centerPixel(result.pngBytes), [0, 255, 0, 255]);
   } finally {
-    if (browser) await browser.close();
+    await context.close();
     await rm(root, { recursive: true, force: true });
   }
 });

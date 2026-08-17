@@ -219,6 +219,18 @@ test('buildSlideRuntimeHtml injects base href and runtime diagnostics', () => {
   assert.match(html, /missing local asset/);
 });
 
+test('buildSlideRuntimeHtml adds motion runtime only to motion slides', () => {
+  const staticHtml = buildSlideRuntimeHtml('<html><head></head><body></body></html>', {
+    slideFile: 'slide-01.html',
+  });
+  const motionHtml = buildSlideRuntimeHtml('<html><head></head><body><div data-motion-root></div></body></html>', {
+    slideFile: 'slide-02.html',
+  });
+
+  assert.doesNotMatch(staticHtml, /data-slides-grab-runtime="motion"/);
+  assert.match(motionHtml, /data-slides-grab-runtime="motion"/);
+});
+
 test('build-viewer injects slide runtime html for local assets', () => {
   const slides = loadSlides(fixturePath('positive-local-asset'));
   const viewerHtml = buildViewerHtml(slides);
