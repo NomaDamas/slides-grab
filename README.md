@@ -108,17 +108,17 @@ slides-grab preview-styles                        # Open the 95-style visual gal
 
 ### Slide motion lifecycle
 
-Use motion only when it explains sequence, accumulation, propagation, or state change. Keep the source HTML complete in its final static state, mark the animated region with `data-motion-root`, and start CSS animation only from the public active class:
+Use motion only when it explains sequence, accumulation, propagation, or state change. Keep the source HTML complete in its final static state, mark the animated region with `data-slides-grab-motion-root`, and start CSS animation only from the public active class:
 
 ```html
-<div data-motion-root>
+<div data-slides-grab-motion-root>
   <div class="event-token"></div>
 </div>
 
 <style>
   .event-token { transform: translateX(240px); }
-  [data-motion-root].slides-grab-motion-active .event-token {
-    animation: deliver 2s ease-out infinite;
+  [data-slides-grab-motion-root].slides-grab-motion-active .event-token {
+    animation: deliver 2s ease-out 1 both;
   }
   @keyframes deliver {
     from { transform: translateX(0); }

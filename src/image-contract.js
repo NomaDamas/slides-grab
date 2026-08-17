@@ -175,7 +175,7 @@ export function buildSlideRuntimeHtml(html, { baseHref, slideFile }) {
     snippets.push(`<base data-slides-grab-runtime="base" href="${baseHref}">`);
   }
 
-  if (/\bdata-motion-root\b/i.test(html)) {
+  if (/\bdata-slides-grab-motion-root\b/i.test(html)) {
     snippets.push(MOTION_RUNTIME_HTML);
   }
 

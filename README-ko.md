@@ -100,17 +100,17 @@ slides-grab preview-styles    # 95개 스타일 미리보기 갤러리를 브라
 
 ### 슬라이드 모션 lifecycle
 
-시간 순서, 누적, 전파, 상태 변화의 이해를 실제로 돕는 경우에만 모션을 사용합니다. 원본 HTML은 완결된 최종 정적 상태로 작성하고, 움직이는 영역에 `data-motion-root`를 붙인 뒤 공개 active class가 있을 때만 CSS animation을 시작합니다.
+시간 순서, 누적, 전파, 상태 변화의 이해를 실제로 돕는 경우에만 모션을 사용합니다. 원본 HTML은 완결된 최종 정적 상태로 작성하고, 움직이는 영역에 `data-slides-grab-motion-root`를 붙인 뒤 공개 active class가 있을 때만 CSS animation을 시작합니다.
 
 ```html
-<div data-motion-root>
+<div data-slides-grab-motion-root>
   <div class="event-token"></div>
 </div>
 
 <style>
   .event-token { transform: translateX(240px); }
-  [data-motion-root].slides-grab-motion-active .event-token {
-    animation: deliver 2s ease-out infinite;
+  [data-slides-grab-motion-root].slides-grab-motion-active .event-token {
+    animation: deliver 2s ease-out 1 both;
   }
   @keyframes deliver {
     from { transform: translateX(0); }

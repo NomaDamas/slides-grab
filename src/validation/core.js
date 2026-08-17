@@ -990,11 +990,12 @@ export async function ensureSlidesPassValidation(
   slidesDir,
   {
     exportLabel = 'Export',
+    selectedSlides = [],
     slideMode = DEFAULT_SLIDE_MODE,
     shouldBlockIssue = isBlockingImageContractIssue,
   } = {},
 ) {
-  const slideFiles = await findSlideFiles(slidesDir);
+  const slideFiles = selectSlideFiles(await findSlideFiles(slidesDir), selectedSlides, slidesDir);
   if (slideFiles.length === 0) {
     throw new Error(`No slide-*.html files found in: ${slidesDir}`);
   }

@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 
 import { ensureSlidesPassValidation } from './validate-slides.js';
+import { selectSlideFiles } from '../src/validation/core.js';
 
 const require = createRequire(import.meta.url);
 const {
@@ -35,6 +36,7 @@ function printUsage() {
       '',
       'Options:',
       `  --slides-dir <path>   Slide directory (default: ${DEFAULT_SLIDES_DIR})`,
+      '  --slide <file>        Render only the named slide file (repeatable)',
       '  --output-dir <path>   Output directory for PNG files (default: <slides-dir>/out-png)',
       `  --slide-mode <mode>   Slide mode: ${getSlideModeChoices().join('|')} (default: ${DEFAULT_SLIDE_MODE})`,
       `  --resolution <preset> Raster size preset: ${getResolutionChoices().join('|')}|4k (default: ${DEFAULT_RESOLUTION})`,
@@ -44,6 +46,7 @@ function printUsage() {
       '  node scripts/html2png.js --slides-dir slides',
       '  node scripts/html2png.js --slides-dir cards --slide-mode card-news',
       '  node scripts/html2png.js --slides-dir slides --resolution 1440p',
+      '  node scripts/html2png.js --slides-dir slides --slide slide-07.html',
     ].join('\n'),
   );
   process.stdout.write('\n');
@@ -75,6 +78,7 @@ function parseCliArgs(args) {
     outputDir: '',
     slideMode: DEFAULT_SLIDE_MODE,
     resolution: DEFAULT_RESOLUTION,
+    slides: [],
     help: false,
   };
 
@@ -93,6 +97,16 @@ function parseCliArgs(args) {
     }
     if (arg.startsWith('--slides-dir=')) {
       options.slidesDir = arg.slice('--slides-dir='.length);
+      continue;
+    }
+
+    if (arg === '--slide') {
+      options.slides.push(readOptionValue(args, i, '--slide'));
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith('--slide=')) {
+      options.slides.push(arg.slice('--slide='.length));
       continue;
     }
 
@@ -194,10 +208,15 @@ async function main() {
 
   await ensureSlidesPassValidation(slidesDir, {
     exportLabel: 'PNG export',
+    selectedSlides: options.slides,
     slideMode: options.slideMode,
   });
 
-  const slideFiles = await discoverSlideFiles(slidesDir);
+  const slideFiles = selectSlideFiles(
+    await discoverSlideFiles(slidesDir),
+    options.slides,
+    slidesDir,
+  );
   if (slideFiles.length === 0) {
     process.stderr.write(`No slide-*.html files found in ${slidesDir}\n`);
     process.exit(1);

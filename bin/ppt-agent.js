@@ -243,11 +243,15 @@ program
   .command('png')
   .description('Render slide HTML files to one PNG per slide')
   .option('--slides-dir <path>', 'Slide directory', 'slides')
+  .option('--slide <file>', 'Render only the named slide file (repeatable)', collectRepeatedOption, [])
   .option('--output-dir <path>', 'Output directory for PNG files (default: <slides-dir>/out-png)')
   .option('--slide-mode <mode>', 'Slide mode: presentation or card-news', 'presentation')
   .option('--resolution <preset>', 'Raster size preset: 720p, 1080p, 1440p, 2160p, or 4k', '2160p')
   .action(async (options = {}) => {
     const args = ['--slides-dir', options.slidesDir];
+    for (const slide of options.slide || []) {
+      args.push('--slide', String(slide));
+    }
     if (options.outputDir) {
       args.push('--output-dir', String(options.outputDir));
     }

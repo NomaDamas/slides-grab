@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -13,9 +13,11 @@ import { renderSlideToPdf } from '../../scripts/html2pdf.js';
 import { createPassAReport, createPassBReport } from '../helpers/design-gate-fixtures.js';
 import { designGateArgs, runSlidesGrabCli } from '../helpers/design-gate-cli.js';
 import { extractZipEntry } from '../helpers/figma-fixtures.js';
+import motionContract from '../../src/motion-contract.cjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../..');
 const ACTIVE_CLASS = 'slides-grab-motion-active';
+const { buildStaticSlideHtml } = motionContract;
 let browser;
 
 before(async () => {
@@ -36,17 +38,17 @@ function viewerSlideHtml(label) {
       from { opacity: 0.8; }
       to { opacity: 1; }
     }
-    [data-motion-root].${ACTIVE_CLASS} {
+    [data-slides-grab-motion-root].${ACTIVE_CLASS} {
       animation: motion-contract-pulse 40ms linear;
     }
   </style>
 </head>
 <body>
-  <div data-motion-root>
+  <div data-slides-grab-motion-root>
     <p>${label}</p>
   </div>
   <script>
-    const root = document.querySelector('[data-motion-root]');
+    const root = document.querySelector('[data-slides-grab-motion-root]');
     root.dataset.animationStarts = '0';
     root.addEventListener('animationstart', () => {
       root.dataset.animationStarts = String(Number(root.dataset.animationStarts) + 1);
@@ -62,8 +64,15 @@ function staticExportSlideHtml() {
 <head>
   <meta charset="utf-8">
   <style>
+    @keyframes motion-contract-export {
+      from { background: #ff0000; }
+      to { background: #0000ff; }
+    }
     html.dynamic-at-load body { background: #ff0000; }
-    html.static-at-load body { background: #00ff00; }
+    html.static-at-load body {
+      background: #00ff00;
+      animation: motion-contract-export 10s linear infinite;
+    }
     html, body { width: 720pt; height: 405pt; margin: 0; overflow: hidden; }
   </style>
   <script>
@@ -73,7 +82,7 @@ function staticExportSlideHtml() {
   </script>
 </head>
 <body>
-  <div data-motion-root>
+  <div data-slides-grab-motion-root>
     <h1>Static export contract</h1>
   </div>
 </body>
@@ -90,11 +99,11 @@ function reducedMotionSlideHtml() {
       from { transform: translateX(0); }
       to { transform: translateX(100px); }
     }
-    [data-motion-root] { animation: motion-contract-loop 10s linear infinite; }
+    [data-slides-grab-motion-root] { animation: motion-contract-loop 10s linear infinite; }
   </style>
 </head>
 <body>
-  <div data-motion-root>
+  <div data-slides-grab-motion-root>
     <p>Reduced motion</p>
   </div>
 </body>
@@ -158,10 +167,18 @@ test('viewer activates only the current slide and restarts motion on re-entry', 
     const page = await context.newPage();
     await page.goto(pathToFileURL(path.join(slidesDir, 'viewer.html')).href, { waitUntil: 'load' });
 
-    const first = page.frameLocator('.slide-frame').nth(0).locator('[data-motion-root]');
-    const second = page.frameLocator('.slide-frame').nth(1).locator('[data-motion-root]');
+    const first = page.frameLocator('.slide-frame').nth(0).locator('[data-slides-grab-motion-root]');
+    const second = page.frameLocator('.slide-frame').nth(1).locator('[data-slides-grab-motion-root]');
     await waitForMotionState(first, true, 1);
     await waitForMotionState(second, false, 0);
+
+    await page.locator('.slide-frame').nth(0).evaluate((frame) => {
+      frame.contentWindow.postMessage('slides-grab:activate', '*');
+    });
+    await first.evaluate(() => new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
+    assert.equal(await first.getAttribute('data-animation-starts'), '1');
 
     await page.locator('#btn-next').click();
     await waitForMotionState(first, false, 1);
@@ -189,7 +206,7 @@ test('viewer keeps the complete static state when reduced motion is requested', 
     const page = await context.newPage();
     await page.goto(pathToFileURL(path.join(slidesDir, 'viewer.html')).href, { waitUntil: 'load' });
 
-    const motionRoot = page.frameLocator('.slide-frame').locator('[data-motion-root]');
+    const motionRoot = page.frameLocator('.slide-frame').locator('[data-slides-grab-motion-root]');
     await motionRoot.waitFor();
     assert.equal(
       await motionRoot.evaluate((element) => getComputedStyle(element).animationName),
@@ -197,6 +214,53 @@ test('viewer keeps the complete static state when reduced motion is requested', 
     );
   } finally {
     await context.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('static export injection is robust and leaves non-slides-grab motion unchanged', () => {
+  const diagramDesignHtml = '<html><head></head><body><div data-motion-root></div></body></html>';
+  assert.equal(buildStaticSlideHtml(diagramDesignHtml), diagramDesignHtml);
+
+  const variants = [
+    '<html data-motion=dynamic><head><script>window.mode = document.documentElement.dataset.motion</script></head><body><div data-slides-grab-motion-root></div></body></html>',
+    '<html><body><div data-slides-grab-motion-root></div><script>window.mode = document.documentElement.dataset.motion</script></body></html>',
+    '<div data-slides-grab-motion-root></div><script>window.mode = document.documentElement.dataset.motion</script>',
+  ];
+
+  for (const html of variants) {
+    const staticHtml = buildStaticSlideHtml(html);
+    assert.match(staticHtml, /data-motion="static"|dataset\.motion\s*=\s*'static'/);
+    assert.match(staticHtml, /data-slides-grab-runtime="motion-static"/);
+    assert.ok(
+      staticHtml.indexOf('data-slides-grab-runtime="motion-static"') < staticHtml.indexOf('window.mode'),
+      'the static contract must run before slide JavaScript',
+    );
+  }
+});
+
+test('PNG export can render only requested slides', { concurrency: false }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'slides-grab-motion-selected-png-'));
+
+  try {
+    const slidesDir = await writeStaticDeck(root);
+    await writeFile(
+      path.join(slidesDir, 'slide-01.html'),
+      '<html><body><img src="https://example.com/unselected.png"></body></html>',
+    );
+    await writeFile(path.join(slidesDir, 'slide-02.html'), staticExportSlideHtml());
+    const outputDir = path.join(root, 'png');
+
+    runSlidesGrabCli([
+      'png',
+      '--slides-dir', slidesDir,
+      '--output-dir', outputDir,
+      '--slide', 'slide-02.html',
+      '--resolution', '720p',
+    ]);
+
+    assert.deepEqual(await readdir(outputDir), ['slide-02.png']);
+  } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
