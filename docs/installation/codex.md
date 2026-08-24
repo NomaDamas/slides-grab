@@ -51,10 +51,13 @@ npx slides-grab install-skills --target codex --scope user
 
 Installed skill names:
 
+- `slides-grab`
+- `slides-grab-html`
+- `slides-grab-image`
 - `slides-grab-plan`
 - `slides-grab-design`
 - `slides-grab-export`
-- `slides-grab`
+- `slides-grab-card-news`
 
 Run one deck per workspace folder:
 

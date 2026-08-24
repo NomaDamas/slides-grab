@@ -31,7 +31,11 @@ test('install-skills installs shared skills and runtime adapters for Codex and C
     assert.match(output, /claude code/i);
 
     assert.equal(existsSync(join(projectDir, '.agents', 'skills', 'slides-grab', 'SKILL.md')), true);
+    assert.equal(existsSync(join(projectDir, '.agents', 'skills', 'slides-grab-html', 'SKILL.md')), true);
+    assert.equal(existsSync(join(projectDir, '.agents', 'skills', 'slides-grab-image', 'SKILL.md')), true);
     assert.equal(existsSync(join(projectDir, '.claude', 'skills', 'slides-grab', 'SKILL.md')), true);
+    assert.equal(existsSync(join(projectDir, '.claude', 'skills', 'slides-grab-html', 'SKILL.md')), true);
+    assert.equal(existsSync(join(projectDir, '.claude', 'skills', 'slides-grab-image', 'SKILL.md')), true);
     assert.equal(existsSync(join(projectDir, '.codex', 'agents', 'slides-grab-design-critic.md')), true);
     assert.equal(existsSync(join(projectDir, '.claude', 'agents', 'design-critic-agent.md')), true);
 

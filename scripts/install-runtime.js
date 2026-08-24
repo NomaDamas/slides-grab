@@ -11,6 +11,8 @@ const VALID_TARGETS = new Set(['all', 'codex', 'claude-code']);
 const VALID_SCOPES = new Set(['project', 'user']);
 const SKILL_NAMES = [
   'slides-grab',
+  'slides-grab-html',
+  'slides-grab-image',
   'slides-grab-plan',
   'slides-grab-design',
   'slides-grab-export',
