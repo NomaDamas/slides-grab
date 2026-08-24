@@ -3,6 +3,12 @@ name: Publish to npm
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version to publish (for example, 1.5.1)"
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -20,11 +26,15 @@ jobs:
       - run: npm ci
       - name: Sync package version from release tag
         run: |
-          TAG_NAME="${{ github.event.release.tag_name }}"
-          VERSION="${TAG_NAME#v}"
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG_NAME="${{ github.event.release.tag_name }}"
+            VERSION="${TAG_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
 
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid release tag for npm version: $TAG_NAME"
+            echo "Invalid package version: $VERSION"
             exit 1
           fi
 
