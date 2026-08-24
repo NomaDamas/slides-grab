@@ -8,7 +8,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -32,3 +32,9 @@ jobs:
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Build ChatGPT plugin package
+        run: npm run build:plugin
+      - name: Attach ChatGPT plugin package to release
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.zip --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
