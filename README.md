@@ -14,6 +14,20 @@ The whole slides are HTML & CSS, the programming langauge (which is not) that ou
 So the slides are beautiful, easily editable by AI agents, and can be converted to PDF or to experimental / unstable PPTX formats.
 </p>
 
+## ChatGPT Work/Web plugin
+
+Build an installable ChatGPT plugin ZIP with:
+
+```bash
+npm run build:plugin
+```
+
+The archive is written to `dist/` and contains the plugin manifest plus every
+published skill. Hosted ChatGPT can use the planning and design workflows
+directly. Export, visual validation, the local editor, and image generation
+still require the local Node.js/Playwright runtime and filesystem access. See
+[`CHATGPT.md`](CHATGPT.md) for the exact support policy.
+
 <p align="center">
 The editor is pure javascript file. You can easily add up new features like adding new coding agents, changing designs, etc.
 </p>
