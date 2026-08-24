@@ -5,14 +5,22 @@ import os from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { chromium } from 'playwright';
 import { getAvailablePort } from './test-server-helpers.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const VIEWPORT = { width: 1600, height: 900 };
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+      timer.unref?.();
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 async function writeCardNewsSlide(workspace) {
@@ -58,20 +66,31 @@ async function writePresentationSlide(workspace) {
 }
 
 async function waitForServerReady(port, child, outputRef) {
-  const started = Date.now();
-  while (Date.now() - started < 20000) {
-    if (child.exitCode !== null) {
-      throw new Error(`server exited early: ${child.exitCode}\n${outputRef.value}`);
-    }
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/config`);
-      if (res.ok) return res.json();
-    } catch {
-      // retry until the editor binds
-    }
-    await sleep(150);
+  const readyMarker = `Local:       http://localhost:${port}`;
+  if (!outputRef.value.includes(readyMarker)) {
+    await withTimeout(new Promise((resolve, reject) => {
+      const onData = () => {
+        if (!outputRef.value.includes(readyMarker)) return;
+        cleanup();
+        resolve();
+      };
+      const onExit = (code) => {
+        cleanup();
+        reject(new Error(`server exited early: ${code}\n${outputRef.value}`));
+      };
+      const cleanup = () => {
+        child.stdout.off('data', onData);
+        child.off('exit', onExit);
+      };
+      child.stdout.on('data', onData);
+      child.once('exit', onExit);
+      onData();
+    }), 20000, `server did not become ready\n${outputRef.value}`);
   }
-  throw new Error(`server did not become ready\n${outputRef.value}`);
+
+  const res = await fetch(`http://127.0.0.1:${port}/api/config`);
+  assert.equal(res.ok, true, `config request failed: ${res.status}\n${outputRef.value}`);
+  return res.json();
 }
 
 async function measurePreview(page, expectedFrame) {
@@ -144,8 +163,15 @@ async function withEditor({ prefix, mode, writeSlides, expectedFrame, screenshot
     await fn({ config, metrics, page });
   } finally {
     if (browser) await browser.close().catch(() => {});
-    server.kill('SIGTERM');
-    await sleep(200);
+    if (server.exitCode === null) {
+      const exited = once(server, 'exit');
+      server.kill('SIGTERM');
+      await withTimeout(
+        exited,
+        5000,
+        `server did not exit after SIGTERM\n${serverOutput.value}`,
+      );
+    }
     await rm(workspace, { recursive: true, force: true }).catch(() => {});
   }
 }
