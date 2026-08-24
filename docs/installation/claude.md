@@ -49,10 +49,13 @@ npx slides-grab install-skills --target claude-code --scope user
 
 Installed skill names:
 
+- `slides-grab`
+- `slides-grab-html`
+- `slides-grab-image`
 - `slides-grab-plan`
 - `slides-grab-design`
 - `slides-grab-export`
-- `slides-grab`
+- `slides-grab-card-news`
 
 ## 4) Run Commands During Workflow
 
