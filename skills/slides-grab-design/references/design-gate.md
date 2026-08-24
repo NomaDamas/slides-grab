@@ -33,7 +33,7 @@ Run the gate as an **adversarial quality loop**, not a one-shot audit:
 
 The loop is: **validate → render evidence → Pass A + Pass B → synthesize → fix findings → validate again → re-render → re-review**. Do not reuse old PNGs or old pass reports after a fix; every loop uses fresh rendered evidence. The same adversarial roles run again, because the fix for one side can create a new defect for the other side.
 
-The gate is a separate evaluation pass. Run it with a critical eye, using runtime-native subagents/tasks for the two reviewer passes when available, so the reviewer is not the same mind that just defended every choice while building.
+The gate is a separate evaluation pass. Prefer dedicated read-only **critic subagents/tasks** for the two reviewer passes whenever the runtime supports them, so the reviewer is not the same mind that just defended every choice while building. Explicitly select image/vision-capable critic models that can open the rendered PNGs; do not infer visual quality from HTML, CSS, filenames, or validation output alone.
 
 ---
 
@@ -159,9 +159,9 @@ This renders one PNG per slide. These PNGs are the REFERENCE evidence every revi
 
 ### Step 2 — Dispatch two read-only reviewer passes in parallel
 
-Send BOTH passes in a single message so they run concurrently. Each pass is **read-only**: it reviews and reports, it never edits slides. Each opens the rendered PNGs directly and returns a verdict with located findings. The two passes differ in charter, not in tooling.
+Send BOTH passes in a single message so they run concurrently. Each pass is **read-only**: it reviews and reports, it never edits slides. Prefer one dedicated **critic subagent/task per pass**, separate from the slide-building agent and from the other reviewer. Explicitly request image/vision-capable models and require them to open every rendered PNG directly before returning a verdict. The two passes differ in charter, not in evidence access.
 
-The passes are dialectical roles, not checklist buckets. Pass A asks whether the deck honors its approved system contract; Pass B asks whether the rendered slides actually land for the audience. A strong deck satisfies both: **contract without impact is inert; impact without contract is drift.**
+When model selection is available, use an image/vision-capable critic for both passes. If only one vision-capable critic slot exists, assign it to Pass B, keep Pass A as a distinct contract review, and leave any visual claim Pass A cannot personally inspect open rather than copying Pass B's conclusion. The passes are dialectical roles, not checklist buckets: Pass A asks whether the deck honors its approved system contract; Pass B asks whether the rendered slides actually land for the audience. A strong deck satisfies both: **contract without impact is inert; impact without contract is drift.**
 
 **Pass A — System Contract / Constraint Integrity (contract guardian).** Proves the deck is allowed, coherent, and traceable before it is allowed to be impressive. It protects the approved design contract: style tokens, palette provenance, type system, semantic tags, asset/content provenance, anti-slop rules, and no ad-hoc drift across slides. Covers gate checks 1 (system consistency), 2 (color discipline), 3 (AI slop), and 5 (content discipline). Owns the **rule** side of the Rule → side effect matrix: whether each mechanical rule is actually applied and consistent. Inputs: all slide HTML source + the rendered PNGs + the validate summary + the approved style spec from `src/design-styles-data.js`.
 
@@ -221,13 +221,13 @@ Blocking findings: None
 
 If either pass has an unresolved Critical finding, non-empty blocking findings, a non-`PASS` verdict, missing rendered evidence, missing current slide fingerprints, missing findings table, or missing required checks, fix the slides and run the full loop again. Do not call `slides-grab design-gate --verdict proceed` until both pass reports satisfy this structure.
 
-> **If no image-capable reviewer is available in the harness**, the gate cannot be completed honestly by the orchestrator alone. Do NOT declare `Proceed` from HTML/grep inspection only. Either (a) route Pass B to an image-capable model/agent, or (b) hand the rendered `gate-preview/` PNGs to the user for the visual verdict. Code-level checks (palette grep, slop grep, font/typography floor, validate) may be reported as a **partial** result, but the visual checks (4, 6, 7) stay open until a real viewing happens. An open visual check is not a pass.
+> **If no image/vision-capable critic reviewer is available in the harness**, the gate cannot be completed honestly by the orchestrator alone. Do NOT declare `Proceed` from HTML-only or grep-only inspection, and do not let the slide-building agent impersonate an independent visual critic. Either (a) route Pass B to an image/vision-capable model/agent, or (b) hand the rendered `gate-preview/` PNGs to the user for the visual verdict. Code-level checks (palette grep, slop grep, font/typography floor, validate) may be reported as a **partial** result, but the visual checks (4, 6, 7) stay open until a real viewing happens. An open visual check is not a pass.
 
 ### Step 3 — Synthesize one verdict
 
 Merge both passes into a single Design Gate Report (format below). Do not average the two reports and do not let one role erase the other. Per the severity rubric: any Critical from either pass blocks `Proceed`. Pass A can veto a choice that violates the approved contract, provenance, mechanical rules, or content truth. Pass B can veto a contract-compliant slide that still fails its audience job, rendered hierarchy, readability, CJK precision, or side-effect compensation. For non-Critical disagreement, use Review Litmus to decide the disposition: for **Major**, fix now or list it for user acceptance in the report; for **Minor**, fix now or track as design debt. Reconcile conflicts with the order in "Reconciliation". The synthesized report — not either pass alone, and not the validate numbers — is the gate's verdict.
 
-Use the current runtime's native subagent/task mechanism when available. If the runtime has no such mechanism, run Pass A and Pass B sequentially from this reference and keep their findings separate before synthesis.
+Use the current runtime's native subagent/task mechanism when available, preferring dedicated critic roles backed by image/vision-capable models. If the runtime has no such mechanism, run Pass A and Pass B sequentially from this reference and keep their findings separate before synthesis; lack of independent image inspection still cannot produce `Proceed`.
 
 ### Step 4 — Fix and repeat until quality holds
 

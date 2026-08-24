@@ -342,3 +342,20 @@ test('design SKILL.md surfaces system declaration and AI-slop guardrails (issue 
   assert.match(text, /AI slop tropes/i);
   assert.match(text, /oklch/i);
 });
+
+test('design gate guidance prefers independent vision-capable critic reviewers (issue #128)', () => {
+  const files = [
+    'skills/slides-grab-design/SKILL.md',
+    'skills/slides-grab-design/references/design-gate.md',
+    'runtimes/codex/agents/slides-grab-design-critic.md',
+    'runtimes/claude-code/agents/design-critic-agent.md',
+  ];
+
+  for (const file of files) {
+    const text = readFileSync(file, 'utf-8');
+    assert.match(text, /critic subagents?\/tasks?/i, `${file} should prefer dedicated critic subagents or tasks`);
+    assert.match(text, /image\/vision-capable/i, `${file} should prefer a vision-capable reviewer`);
+    assert.match(text, /rendered PNGs?/i, `${file} should require rendered PNG inspection`);
+    assert.match(text, /HTML-only/i, `${file} should reject HTML-only visual approval`);
+  }
+});
