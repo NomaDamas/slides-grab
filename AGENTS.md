@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Contribution Workflow
+
+- `main` is the only integration branch. Do not create, target, or depend on a `dev` branch.
+- Create feature or fix branches from the latest `origin/main`.
+- Open pull requests from those branches directly against `main`.
+- Before opening or updating a pull request, rebase or merge the latest `origin/main` into the working branch and resolve conflicts locally.
+- Run the relevant tests and report their results before requesting review.
+- Do not merge directly to `main` unless the repository owner explicitly requests it; use a pull request and its required checks/reviews.
+
 ## Project Overview
 
 slides-grab is an agent-first PPT framework. AI agents write HTML slides directly, and a 3-stage pipeline (Planning → Design → Conversion) produces high-quality HTML/PDF output plus experimental / unstable PPTX and Figma export.
