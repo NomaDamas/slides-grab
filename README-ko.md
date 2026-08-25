@@ -47,6 +47,24 @@ npm ci && npx playwright install chromium
 
 > Node.js **20 이상**이 필요합니다.
 
+### 기여 흐름
+
+이 저장소의 통합 브랜치는 `main` 하나뿐입니다. 최신
+`origin/main`에서 기능 또는 수정 브랜치를 만들고, 작업 중에도 최신
+`origin/main`을 반영한 뒤, 항상 `main`을 대상으로 PR을 생성하세요.
+별도의 `dev` 통합 브랜치는 사용하지 않습니다.
+
+```bash
+git fetch origin main
+git switch -c feat/my-change origin/main
+# 변경 작업과 테스트 실행
+git push -u origin feat/my-change
+gh pr create --base main --head feat/my-change
+```
+
+PR을 만들기 전에 관련 테스트를 실행하고, PR 설명에 실행한 명령과 결과를
+기록하세요.
+
 ### 설치: 저장소를 클론하지 않는 방법
 
 CLI와 공유 에이전트 스킬만 사용하려면 npm 패키지를 설치하면 됩니다.

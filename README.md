@@ -73,6 +73,24 @@ npm ci && npx playwright install chromium
 
 > Requires **Node.js >= 20**.
 
+### Contribution workflow
+
+`main` is the only integration branch. Start feature or fix branches from the
+latest `origin/main`, keep them up to date with `origin/main`, and open pull
+requests directly against `main`. There is no separate `dev` integration
+branch.
+
+```bash
+git fetch origin main
+git switch -c feat/my-change origin/main
+# make and test the change
+git push -u origin feat/my-change
+gh pr create --base main --head feat/my-change
+```
+
+Run the relevant tests before opening the pull request and include the command
+and result in the pull request description.
+
 ### No-clone install
 
 ```bash
