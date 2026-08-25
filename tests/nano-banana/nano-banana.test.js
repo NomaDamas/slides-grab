@@ -90,6 +90,23 @@ test('parseNanoBananaCliArgs accepts OpenAI-compatible endpoint options', () => 
   );
 });
 
+test('parseNanoBananaCliArgs accepts Codex-compatible endpoint options', () => {
+  const parsed = parseNanoBananaCliArgs([
+    '--prompt', 'tiny test',
+    '--provider', 'codex',
+    '--base-url', 'https://gateway.example/openai/v1',
+    '--api-key-env', 'COMPAT_IMAGE_KEY',
+  ]);
+
+  assert.equal(parsed.provider, IMAGE_PROVIDER_CODEX);
+  assert.equal(parsed.baseUrl, 'https://gateway.example/openai/v1');
+  assert.equal(parsed.apiKeyEnv, 'COMPAT_IMAGE_KEY');
+  assert.throws(
+    () => parseNanoBananaCliArgs(['--prompt', 'tiny test', '--provider', 'codex', '--api-key-env', 'NOT-A-NAME']),
+    /--api-key-env/i,
+  );
+});
+
 test('parseNanoBananaCliArgs reads explicit options and rejects invalid values', () => {
   assert.deepEqual(
     parseNanoBananaCliArgs([

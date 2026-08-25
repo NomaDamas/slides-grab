@@ -31,6 +31,7 @@ dist/
 build/
 *.log
 *.tgz
+*.zip
 
 # Python (if any)
 __pycache__/

@@ -12,6 +12,8 @@ export function setSlideFrame(width, height) {
 export const TOOL_MODE_DRAW = 'draw';
 export const TOOL_MODE_SELECT = 'select';
 export const POPOVER_TEXT = 'text';
+export const APPLY_MODE_HTML = 'html';
+export const APPLY_MODE_IMAGE = 'image';
 export const POPOVER_TEXT_COLOR = 'text-color';
 export const POPOVER_BG_COLOR = 'bg-color';
 export const POPOVER_SIZE = 'size';

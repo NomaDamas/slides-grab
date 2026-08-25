@@ -1,0 +1,6 @@
+{
+  "name": "slides-grab",
+  "version": "1.0.0",
+  "description": "Plan and design presentations with the slides-grab skill set",
+  "skills": "./skills/"
+}
