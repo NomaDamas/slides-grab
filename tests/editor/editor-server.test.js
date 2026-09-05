@@ -161,10 +161,12 @@ test('/api/models exposes the GPT-5.6 family with Sol as default and removes gpt
       'gpt-5.6-sol',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
+      'gpt-6-astra',
       'claude-opus-4-8',
       'claude-sonnet-4-6',
     ]);
     assert.equal(body.defaultModel, 'gpt-5.6-sol');
+    assert.ok(body.models.includes('gpt-6-astra'));
   } finally {
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });
@@ -196,6 +198,7 @@ test('/api/apply rejects removed GPT-5.5, GPT-5.4, and GPT-5.3 identifiers', asy
       assert.match(body.error || '', /gpt-5\.6-sol/);
       assert.match(body.error || '', /gpt-5\.6-terra/);
       assert.match(body.error || '', /gpt-5\.6-luna/);
+      assert.match(body.error || '', /gpt-6-astra/);
       assert.doesNotMatch(body.error || '', /gpt-5\.(?:5|4|3)/);
     }
   } finally {

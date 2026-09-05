@@ -15,6 +15,7 @@ export const CODEX_MODELS = [
   'gpt-5.6-sol',
   'gpt-5.6-terra',
   'gpt-5.6-luna',
+  'gpt-6-astra',
 ];
 
 export const CLAUDE_MODELS = ['claude-opus-4-8', 'claude-sonnet-4-6'];
