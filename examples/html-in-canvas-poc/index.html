@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML-in-Canvas slide editor PoC</title>
+  <link rel="stylesheet" href="./poc.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">slides-grab experiment</p>
+      <h1>HTML-in-Canvas mixed editor</h1>
+    </div>
+    <div class="status-group">
+      <p id="renderer-badge" class="badge">Detecting renderer…</p>
+      <button id="reset-button" type="button">Reset scene</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="instructions" aria-label="PoC instructions">
+      <p><strong>Drag</strong> either HTML card. <strong>Double-click</strong> text to edit it.</p>
+      <p>The blue shapes and connector are Canvas; the two cards are real DOM.</p>
+    </section>
+
+    <div id="viewport">
+      <div id="slide-stage">
+        <canvas id="slide-canvas" width="1120" height="630" layoutsubtree>
+          <article class="html-object title-object" data-object-id="title">
+            <p class="object-kicker">REAL DOM TEXT</p>
+            <h1>Editable HTML</h1>
+            <p>Selectable, searchable and contenteditable inside a Canvas-composed slide.</p>
+          </article>
+          <article class="html-object card-object" data-object-id="card">
+            <p class="object-kicker">HTML CARD</p>
+            <h2>One shared scene</h2>
+            <p>Canvas geometry behind, semantic content above, one transform model.</p>
+          </article>
+        </canvas>
+        <div id="fallback-layer" aria-label="DOM fallback layer"></div>
+        <div id="selection-box" hidden></div>
+      </div>
+    </div>
+
+    <aside class="snapshot-panel">
+      <div>
+        <p class="eyebrow">Live scene document</p>
+        <p>Canvas is only the renderer. This JSON remains the editable source of truth.</p>
+      </div>
+      <pre id="scene-output"></pre>
+    </aside>
+  </main>
+
+  <script type="module" src="./poc.js"></script>
+</body>
+</html>
+

@@ -15,6 +15,8 @@ import {
   normalizeHexColor, parsePixelValue, isBoldFontWeight,
 } from './editor-utils.js';
 import { renderBboxes, scaleSlide, clientToSlidePoint, getXPath } from './editor-bbox.js';
+import { indexSlideObjects } from './editor-object-model.js';
+import { serializeSlideDocument } from './editor-serialize.js';
 
 const MIN_OBJECT_SIZE = 16;
 const OBJECT_MOVE_EPSILON = 4;
@@ -23,10 +25,15 @@ const RESIZE_HANDLE_STYLES = new Set(['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'
 
 let objectTransform = null;
 let commitObjectTransform = () => {};
+let commitInlineTextEdit = () => {};
 let suppressNextObjectClick = false;
 
 export function setObjectTransformCommitHandler(callback) {
   commitObjectTransform = typeof callback === 'function' ? callback : (() => {});
+}
+
+export function setInlineTextEditCommitHandler(callback) {
+  commitInlineTextEdit = typeof callback === 'function' ? callback : (() => {});
 }
 
 function isObjectTransformActive() {
@@ -69,28 +76,34 @@ function clampObjectGeometry(base, dx, dy, handle = 'move') {
     }
   }
 
-  next.x = clamp(Math.round(next.x), 0, SLIDE_W - MIN_OBJECT_SIZE);
+  const minimumWidth = handle === 'move'
+    ? Math.max(1, base.width)
+    : base.width <= 4 ? 1 : MIN_OBJECT_SIZE;
+  const minimumHeight = handle === 'move'
+    ? Math.max(1, base.height)
+    : base.height <= 4 ? 1 : MIN_OBJECT_SIZE;
+  next.x = clamp(Math.round(next.x), 0, SLIDE_W - Math.min(SLIDE_W, minimumWidth));
   next.y = Math.round(next.y);
-  next.y = clamp(next.y, 0, SLIDE_H - MIN_OBJECT_SIZE);
+  next.y = clamp(next.y, 0, SLIDE_H - Math.min(SLIDE_H, minimumHeight));
 
-  if (next.width < MIN_OBJECT_SIZE) {
-    next.width = MIN_OBJECT_SIZE;
+  if (next.width < minimumWidth) {
+    next.width = minimumWidth;
     if (handle.includes('w')) {
-      next.x = base.x + base.width - MIN_OBJECT_SIZE;
+      next.x = base.x + base.width - minimumWidth;
     }
   }
 
-  if (next.height < MIN_OBJECT_SIZE) {
-    next.height = MIN_OBJECT_SIZE;
+  if (next.height < minimumHeight) {
+    next.height = minimumHeight;
     if (handle.includes('n')) {
-      next.y = base.y + base.height - MIN_OBJECT_SIZE;
+      next.y = base.y + base.height - minimumHeight;
     }
   }
 
-  next.x = clamp(Math.round(next.x), 0, SLIDE_W - MIN_OBJECT_SIZE);
-  next.y = clamp(Math.round(next.y), 0, SLIDE_H - MIN_OBJECT_SIZE);
-  next.width = clamp(Math.round(next.width), MIN_OBJECT_SIZE, SLIDE_W - next.x);
-  next.height = clamp(Math.round(next.height), MIN_OBJECT_SIZE, SLIDE_H - next.y);
+  next.x = clamp(Math.round(next.x), 0, SLIDE_W - Math.min(SLIDE_W, minimumWidth));
+  next.y = clamp(Math.round(next.y), 0, SLIDE_H - Math.min(SLIDE_H, minimumHeight));
+  next.width = clamp(Math.round(next.width), minimumWidth, SLIDE_W - next.x);
+  next.height = clamp(Math.round(next.height), minimumHeight, SLIDE_H - next.y);
 
   return next;
 }
@@ -156,12 +169,34 @@ function getOffsetParentOrigin(element) {
 }
 
 function serializeObjectTransformDocument(doc) {
-  if (!doc?.documentElement) return '';
-  const doctype = doc.doctype ? `<!DOCTYPE ${doc.doctype.name}>` : '<!DOCTYPE html>';
-  return `${doctype}\n${doc.documentElement.outerHTML}`;
+  return serializeSlideDocument(doc);
+}
+
+function ensureLayoutPlaceholder(element, rect) {
+  const view = slideIframe.contentWindow;
+  const computed = view?.getComputedStyle?.(element);
+  if (!computed || computed.position === 'absolute' || computed.position === 'fixed') return;
+  if (element.previousElementSibling?.dataset?.slideObjectPlaceholder === element.dataset.slideObjectId) return;
+
+  const placeholder = element.ownerDocument.createElement('div');
+  if (element.ownerDocument.body.dataset.slidesGrabFlatScene === '1') return;
+  placeholder.dataset.slideObjectPlaceholder = element.dataset.slideObjectId || '';
+  placeholder.setAttribute('aria-hidden', 'true');
+  placeholder.style.width = `${Math.round(rect.width)}px`;
+  placeholder.style.height = `${Math.round(rect.height)}px`;
+  placeholder.style.flex = `0 0 ${Math.round(rect.width)}px`;
+  placeholder.style.marginTop = computed.marginTop;
+  placeholder.style.marginRight = computed.marginRight;
+  placeholder.style.marginBottom = computed.marginBottom;
+  placeholder.style.marginLeft = computed.marginLeft;
+  placeholder.style.visibility = 'hidden';
+  placeholder.style.pointerEvents = 'none';
+  placeholder.style.boxSizing = 'border-box';
+  element.before(placeholder);
 }
 
 function applyObjectGeometryToElement(element, rect) {
+  ensureLayoutPlaceholder(element, rect);
   element.style.position = element.style.position || 'absolute';
   element.style.boxSizing = 'border-box';
 
@@ -205,6 +240,10 @@ export function resolveXPath(doc, xpath) {
 export function getSelectedObjectElement(slide = currentSlideFile()) {
   if (!slide) return null;
   const ss = getSlideState(slide);
+  if (ss.selectedObjectId) {
+    const byId = slideIframe.contentDocument?.querySelector?.(`[data-slide-object-id="${CSS.escape(ss.selectedObjectId)}"]`);
+    if (isElementNode(byId)) return byId;
+  }
   const xpath = ss.selectedObjectXPath;
   if (!xpath) return null;
 
@@ -218,7 +257,7 @@ export function isSelectableElement(el) {
   const tag = el.tagName.toLowerCase();
   if (NON_SELECTABLE_TAGS.has(tag)) return false;
   const rect = el.getBoundingClientRect();
-  return rect.width > 1 && rect.height > 1;
+  return rect.width > 0 && rect.height > 0;
 }
 
 export function isTextEditableElement(el) {
@@ -229,17 +268,83 @@ export function isTextEditableElement(el) {
   return Array.from(el.children).every(c => INLINE_TAGS.has(c.tagName));
 }
 
-export function getSelectableTargetAt(clientX, clientY) {
+export function getSelectableTargetAt(clientX, clientY, { cycle = false } = {}) {
   const doc = slideIframe.contentDocument;
   if (!doc) return null;
 
   const point = clientToSlidePoint(clientX, clientY);
+  const thinCandidates = Array.from(doc.querySelectorAll('[data-slide-object-id]'))
+    .filter((element) => {
+      if (!isSelectableElement(element)) return false;
+      const rect = element.getBoundingClientRect();
+      if (Math.min(rect.width, rect.height) > 4) return false;
+      return point.x >= rect.left - 12
+        && point.x <= rect.right + 12
+        && point.y >= rect.top - 12
+        && point.y <= rect.bottom + 12;
+    })
+    .sort((a, b) => {
+      const aRect = a.getBoundingClientRect();
+      const bRect = b.getBoundingClientRect();
+      return (aRect.width * aRect.height) - (bRect.width * bRect.height);
+    });
+  if (thinCandidates[0]) return thinCandidates[0];
+
   let node = doc.elementFromPoint(point.x, point.y);
-  while (node && !isSelectableElement(node)) {
+  if (node?.hasAttribute?.('data-slides-grab-runtime')) {
+    node = doc.body;
+  }
+  const candidates = [];
+  while (node) {
+    if (isSelectableElement(node) && !isSlideBackgroundElement(node)) {
+      candidates.push(node);
+    }
     node = node.parentElement;
   }
-  if (!isElementNode(node)) return null;
-  return isSlideBackgroundElement(node) ? null : node;
+  if (candidates.length === 0) return null;
+  if (!cycle) return candidates[0];
+  return candidates[1] || candidates[0];
+}
+
+export function beginInlineTextEditAt(clientX, clientY) {
+  const element = getSelectableTargetAt(clientX, clientY);
+  if (!isTextEditableElement(element)) return false;
+
+  const beforeHtml = serializeObjectTransformDocument(slideIframe.contentDocument);
+  const xpath = getXPath(element);
+  setSelectedObjectXPath(xpath, 'Editing text directly on the slide.');
+  element.contentEditable = 'true';
+  element.dataset.slidesGrabEditing = 'true';
+  element.focus();
+
+  const range = slideIframe.contentDocument.createRange();
+  range.selectNodeContents(element);
+  const selection = slideIframe.contentWindow.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  const finish = () => {
+    for (const block of Array.from(element.children)) {
+      if (block.tagName !== 'DIV') continue;
+      const fragment = element.ownerDocument.createDocumentFragment();
+      fragment.append(element.ownerDocument.createElement('br'));
+      while (block.firstChild) fragment.append(block.firstChild);
+      block.replaceWith(fragment);
+    }
+    element.contentEditable = 'false';
+    delete element.dataset.slidesGrabEditing;
+    element.removeEventListener('blur', finish);
+    element.removeEventListener('keydown', onKeyDown);
+    commitInlineTextEdit({ beforeHtml });
+  };
+  const onKeyDown = (event) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    element.blur();
+  };
+  element.addEventListener('blur', finish);
+  element.addEventListener('keydown', onKeyDown);
+  return true;
 }
 
 export function elementToSlideRect(el) {
@@ -486,6 +591,7 @@ export function initObjectInteractionEvents() {
 }
 
 export function renderObjectSelection() {
+  indexSlideObjects(slideIframe.contentDocument);
   const selectedEl = state.toolMode === TOOL_MODE_SELECT ? getSelectedObjectElement() : null;
   const hoveredEl = state.toolMode === TOOL_MODE_SELECT
     ? resolveXPath(slideIframe.contentDocument, state.hoveredObjectXPath)
@@ -537,6 +643,8 @@ export function setSelectedObjectXPath(xpath, statusMessage = 'Object selected.'
   if (!slide) return;
   const ss = getSlideState(slide);
   ss.selectedObjectXPath = xpath || '';
+  const selected = xpath ? resolveXPath(slideIframe.contentDocument, xpath) : null;
+  ss.selectedObjectId = isElementNode(selected) ? selected.dataset.slideObjectId || '' : '';
   state.hoveredObjectXPath = xpath || '';
   renderObjectSelection();
   updateObjectEditorControls();

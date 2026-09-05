@@ -1,0 +1,228 @@
+:root {
+  color: #e8edf7;
+  background: #090d18;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 1180px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(57, 100, 255, 0.17), transparent 32%),
+    #090d18;
+}
+
+button {
+  border: 1px solid #34405a;
+  border-radius: 9px;
+  padding: 9px 14px;
+  color: #e8edf7;
+  background: #151d2e;
+  cursor: pointer;
+}
+
+.topbar,
+.instructions,
+.snapshot-panel {
+  width: 1120px;
+  margin-inline: auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 18px;
+}
+
+.topbar h1 {
+  margin: 4px 0 0;
+  font-size: 24px;
+}
+
+.eyebrow,
+.object-kicker {
+  margin: 0;
+  color: #7d91bd;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  margin: 0;
+  border: 1px solid #334263;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #9fb5e8;
+  background: #11192a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge.native {
+  border-color: #267f62;
+  color: #8ce5c2;
+  background: #0f2823;
+}
+
+.instructions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #9ba8c1;
+  font-size: 12px;
+}
+
+.instructions p {
+  margin: 0;
+}
+
+#viewport {
+  width: 1160px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #212b40;
+  border-radius: 18px;
+  background: #0e1422;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+#slide-stage {
+  position: relative;
+  width: 1120px;
+  height: 630px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f5f7fb;
+}
+
+#slide-canvas,
+#fallback-layer,
+#selection-box {
+  position: absolute;
+  inset: 0;
+}
+
+#slide-canvas {
+  width: 1120px;
+  height: 630px;
+}
+
+#fallback-layer {
+  pointer-events: none;
+}
+
+.html-object {
+  position: absolute;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(38, 53, 82, 0.15);
+  border-radius: 22px;
+  padding: 24px 28px;
+  color: #16213b;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 50px rgba(32, 49, 82, 0.15);
+  cursor: grab;
+  user-select: none;
+}
+
+#fallback-layer .html-object {
+  pointer-events: auto;
+}
+
+.html-object.editing {
+  cursor: text;
+  user-select: text;
+}
+
+.html-object h1,
+.html-object h2,
+.html-object p {
+  margin-block: 0;
+}
+
+.title-object h1 {
+  margin-top: 10px;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.title-object > p:last-child {
+  width: 430px;
+  margin-top: 18px;
+  color: #52617c;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.card-object h2 {
+  margin-top: 12px;
+  font-size: 27px;
+}
+
+.card-object > p:last-child {
+  margin-top: 12px;
+  color: #5e6980;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+#selection-box {
+  inset: auto;
+  z-index: 20;
+  border: 2px solid #376df7;
+  border-radius: 24px;
+  pointer-events: none;
+}
+
+#selection-box::after {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #376df7;
+  content: "";
+}
+
+.snapshot-panel {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  margin-top: 18px;
+  margin-bottom: 40px;
+  color: #9ba8c1;
+  font-size: 13px;
+}
+
+.snapshot-panel p {
+  line-height: 1.5;
+}
+
+#scene-output {
+  min-height: 120px;
+  margin: 0;
+  border: 1px solid #212b40;
+  border-radius: 12px;
+  padding: 16px;
+  color: #bad0ff;
+  background: #0e1422;
+  font-size: 12px;
+}
+

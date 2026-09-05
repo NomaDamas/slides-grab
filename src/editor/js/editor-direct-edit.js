@@ -5,26 +5,14 @@ import { slideIframe } from './editor-dom.js';
 import { currentSlideFile, getDirectSaveState, getSlideState, setStatus } from './editor-utils.js';
 import { addChatMessage } from './editor-chat.js';
 import { getSelectedObjectElement, renderObjectSelection, updateObjectEditorControls, readSelectedObjectStyleState } from './editor-select.js';
+import { serializeSlideDocument } from './editor-serialize.js';
 
 const MAX_HISTORY_ITEMS = 50;
 const editHistoryBySlide = new Map();
 const internalRestoreTimersBySlide = new Map();
 const internalRestoreSlides = new Set();
 
-export function serializeSlideDocument(doc) {
-  if (!doc?.documentElement) return '';
-  const documentElement = doc.documentElement.cloneNode(true);
-  documentElement.querySelectorAll('[data-slides-grab-runtime]').forEach((node) => node.remove());
-  documentElement.querySelectorAll('head > base[href="/slides/"]').forEach((node) => node.remove());
-  documentElement.querySelectorAll('head > script').forEach((node) => {
-    const source = node.textContent || '';
-    if (source.includes("const prefix = '[slides-grab:image]'") && source.includes('validateAssetSource')) {
-      node.remove();
-    }
-  });
-  const doctype = doc.doctype ? `<!DOCTYPE ${doc.doctype.name}>` : '<!DOCTYPE html>';
-  return `${doctype}\n${documentElement.outerHTML}`;
-}
+export { serializeSlideDocument } from './editor-serialize.js';
 
 function getEditHistoryState(slide) {
   if (!editHistoryBySlide.has(slide)) {
@@ -92,6 +80,7 @@ function restoreSlideDocumentHtml(slide, html, message) {
   const ss = getSlideState(slide);
   if (ss.selectedObjectXPath && !getSelectedObjectElement(slide)) {
     ss.selectedObjectXPath = '';
+    ss.selectedObjectId = '';
   }
   state.hoveredObjectXPath = '';
   renderObjectSelection();

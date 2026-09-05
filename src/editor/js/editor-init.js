@@ -10,6 +10,8 @@ import {
   alignLeft, alignCenter, alignRight,
   popoverTextInput, popoverApplyText, popoverTextColorInput, popoverBgColorInput,
   popoverSizeInput, popoverApplySize, toolModeDrawBtn, toolModeSelectBtn,
+  objectRendererStatus,
+  freezeFlatScene,
 } from './editor-dom.js';
 import {
   currentSlideFile, getSlideState, normalizeModelName, setStatus,
@@ -25,16 +27,20 @@ import {
   getSelectedObjectElement, setSelectedObjectXPath, updateHoveredObjectFromPointer,
   clearHoveredObject, getSelectableTargetAt, readSelectedObjectStyleState,
   initObjectInteractionEvents, setObjectTransformCommitHandler, consumeObjectTransformClickSuppression,
+  beginInlineTextEditAt, setInlineTextEditCommitHandler,
 } from './editor-select.js';
 import {
   mutateSelectedObject, applyTextDecorationToken,
   scheduleDirectSave, recordDirectEditHistory, undoDirectEdit, redoDirectEdit, clearDirectEditHistory,
-  consumeInternalDocumentRestore,
+  consumeInternalDocumentRestore, flushDirectSaveForSlide,
 } from './editor-direct-edit.js';
 import { updateSendState, applyChanges } from './editor-send.js';
 import { goToSlide } from './editor-navigation.js';
 import { connectSSE, loadRunsInitial } from './editor-sse.js';
 import { configureEditorClient, getEditorClient, updateEditorClientLabels } from './editor-type.js';
+import { enableHtmlInCanvas } from './editor-html-canvas.js';
+import { indexSlideObjects } from './editor-object-model.js';
+import { flattenSlideDocument, isFlatSceneDocument } from './editor-flat-scene.js';
 
 // Late-binding: connect bbox changes to updateSendState
 onBboxChange(updateSendState);
@@ -70,7 +76,7 @@ drawLayer.addEventListener('click', (event) => {
   if (state.toolMode !== TOOL_MODE_SELECT) return;
   if (consumeObjectTransformClickSuppression()) return;
   if (event.target && event.target.closest && event.target.closest('.object-handle')) return;
-  const target = getSelectableTargetAt(event.clientX, event.clientY);
+  const target = getSelectableTargetAt(event.clientX, event.clientY, { cycle: event.altKey });
   if (!target) {
     setSelectedObjectXPath('', 'No selectable object at this point.');
     return;
@@ -78,6 +84,13 @@ drawLayer.addEventListener('click', (event) => {
 
   const xpath = getXPath(target);
   setSelectedObjectXPath(xpath, `Object selected on ${currentSlideFile()}.`);
+});
+drawLayer.addEventListener('dblclick', (event) => {
+  if (state.toolMode !== TOOL_MODE_SELECT) return;
+  if (beginInlineTextEditAt(event.clientX, event.clientY)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 });
 if (objectLayer) {
   objectLayer.addEventListener('mousemove', (event) => {
@@ -92,7 +105,7 @@ if (objectLayer) {
     if (!(target instanceof HTMLElement)) return;
     if (target.closest('.object-handle')) return;
 
-    const selectable = getSelectableTargetAt(event.clientX, event.clientY);
+    const selectable = getSelectableTargetAt(event.clientX, event.clientY, { cycle: event.altKey });
     if (!selectable) {
       setSelectedObjectXPath('', 'No selectable object at this point.');
       return;
@@ -100,6 +113,13 @@ if (objectLayer) {
 
     const xpath = getXPath(selectable);
     setSelectedObjectXPath(xpath, `Object selected on ${currentSlideFile()}.`);
+  });
+  objectLayer.addEventListener('dblclick', (event) => {
+    if (state.toolMode !== TOOL_MODE_SELECT) return;
+    if (beginInlineTextEditAt(event.clientX, event.clientY)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   });
 }
 window.addEventListener('mousemove', moveDrawing);
@@ -109,6 +129,24 @@ initObjectInteractionEvents();
 setObjectTransformCommitHandler(({ beforeHtml } = {}) => {
   recordDirectEditHistory(beforeHtml);
   scheduleDirectSave(300, 'Object geometry updated and saved.');
+});
+setInlineTextEditCommitHandler(({ beforeHtml } = {}) => {
+  recordDirectEditHistory(beforeHtml);
+  scheduleDirectSave(120, 'Inline text updated and saved.');
+  renderObjectSelection();
+  updateObjectEditorControls();
+});
+freezeFlatScene?.addEventListener('click', async () => {
+  const slide = currentSlideFile();
+  const doc = slideIframe.contentDocument;
+  if (!slide || !doc || isFlatSceneDocument(doc)) return;
+
+  freezeFlatScene.disabled = true;
+  const result = flattenSlideDocument(doc);
+  clearDirectEditHistory(slide);
+  scheduleDirectSave(0, `Frozen into ${result.count} independent objects.`);
+  await flushDirectSaveForSlide(slide);
+  slideIframe.src = slideIframe.src;
 });
 
 // Send
@@ -310,6 +348,18 @@ window.addEventListener('resize', scaleSlide);
 
 // Iframe load
 slideIframe.addEventListener('load', () => {
+  const objects = indexSlideObjects(slideIframe.contentDocument);
+  const canvas = enableHtmlInCanvas(slideIframe.contentDocument);
+  if (objectRendererStatus) {
+    objectRendererStatus.textContent = canvas
+      ? `Native HTML-in-Canvas · ${objects.length} editable objects`
+      : `DOM object model · ${objects.length} editable objects`;
+  }
+  if (freezeFlatScene) {
+    const frozen = isFlatSceneDocument(slideIframe.contentDocument);
+    freezeFlatScene.disabled = frozen;
+    freezeFlatScene.textContent = frozen ? 'Frozen editable Canvas scene' : 'Freeze to editable Canvas';
+  }
   const slide = currentSlideFile();
   if (slide) {
     if (!consumeInternalDocumentRestore(slide)) {
@@ -318,6 +368,7 @@ slideIframe.addEventListener('load', () => {
     const ss = getSlideState(slide);
     if (ss.selectedObjectXPath && !getSelectedObjectElement(slide)) {
       ss.selectedObjectXPath = '';
+      ss.selectedObjectId = '';
     }
   }
   state.hoveredObjectXPath = '';
@@ -325,6 +376,17 @@ slideIframe.addEventListener('load', () => {
   renderObjectSelection();
   updateObjectEditorControls();
   updateSendState();
+  slideIframe.contentDocument?.addEventListener('keydown', (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    const key = event.key.toLowerCase();
+    if (key === 'z') {
+      event.preventDefault();
+      event.shiftKey ? redoDirectEdit() : undoDirectEdit();
+    } else if (key === 'y') {
+      event.preventDefault();
+      redoDirectEdit();
+    }
+  });
 });
 
 function applySlideFrameCss(width, height) {
