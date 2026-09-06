@@ -12,6 +12,7 @@ import {
   CLAUDE_MODELS,
   DEFAULT_CODEX_MODEL,
   isClaudeModel,
+  isCodexModel,
 } from '../../src/editor/js/model-registry.js';
 import { getAvailablePort } from './test-server-helpers.js';
 
@@ -30,6 +31,7 @@ const EXPECTED_EDITOR_MODELS = [
   'gpt-5.6-sol',
   'gpt-5.6-terra',
   'gpt-5.6-luna',
+  'gpt-6-astra',
   'claude-opus-4-8',
   'claude-sonnet-4-6',
 ];
@@ -191,6 +193,16 @@ test('DEFAULT_CODEX_MODEL is the first entry of CODEX_MODELS', () => {
 test('editor model registry exposes the GPT-5.6 family in canonical order and removes gpt-5.5 (issue #122)', () => {
   assert.deepEqual(ALL_MODELS, EXPECTED_EDITOR_MODELS);
   assert.equal(DEFAULT_CODEX_MODEL, 'gpt-5.6-sol');
+});
+
+test('editor model registry exposes official gpt-6-astra as a Codex model without replacing the GPT-5.6 default', () => {
+  assert.equal(isCodexModel('gpt-6-astra'), true);
+  assert.equal(isClaudeModel('gpt-6-astra'), false);
+  assert.ok(CODEX_MODELS.includes('gpt-6-astra'));
+  assert.equal(CODEX_MODELS.indexOf('gpt-6-astra'), 3, 'gpt-6-astra must follow the GPT-5.6 family');
+  assert.equal(DEFAULT_CODEX_MODEL, 'gpt-5.6-sol');
+  assert.equal(ALL_MODELS.includes('gpt-5.4'), false);
+  assert.equal(ALL_MODELS.includes('gpt-5.5'), false);
 });
 
 test('isClaudeModel correctly classifies every registered model', () => {
