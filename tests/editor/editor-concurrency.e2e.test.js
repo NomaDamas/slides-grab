@@ -263,7 +263,7 @@ test('times out stuck claude bbox edit subprocesses and clears the active run lo
     const firstRes = await fetch(`http://localhost:${port}/api/apply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: createApplyBody('slide-01.html', { model: 'claude-sonnet-4-6' }),
+      body: createApplyBody('slide-01.html', { model: 'opus-5.5' }),
     });
 
     const firstBody = await firstRes.json();
@@ -275,7 +275,7 @@ test('times out stuck claude bbox edit subprocesses and clears the active run lo
     const secondRes = await fetch(`http://localhost:${port}/api/apply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: createApplyBody('slide-01.html', { model: 'claude-sonnet-4-6' }),
+      body: createApplyBody('slide-01.html', { model: 'opus-5.5' }),
     });
 
     const secondBody = await secondRes.json();

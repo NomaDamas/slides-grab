@@ -172,7 +172,7 @@ test('editor-server kills the spawned codex child when the /api/apply request is
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Hang this edit so we can abort it.',
-        model: 'gpt-5.6-sol',
+        model: 'gpt-6-sol',
         selections: [
           {
             x: 40,
@@ -232,7 +232,7 @@ test('editor-server kills all in-flight codex children when the server itself is
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Hang during shutdown.',
-        model: 'gpt-5.6-sol',
+        model: 'gpt-6-sol',
         selections: [
           {
             x: 40,
@@ -281,7 +281,7 @@ test('/api/runs/:runId/cancel kills the spawned child and reports cancelled=true
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Hang to be cancelled via API.',
-        model: 'gpt-5.6-sol',
+        model: 'gpt-6-sol',
         selections: [
           {
             x: 40,
