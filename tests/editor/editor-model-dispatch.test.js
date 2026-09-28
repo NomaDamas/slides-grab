@@ -28,14 +28,11 @@ const EDIT_SUBPROCESS_TIMEOUT_MS = 4_000;
 const SERVER_READY_TIMEOUT_MS = 15_000;
 
 const EXPECTED_EDITOR_MODELS = [
-  'gpt-5.6-sol',
-  'gpt-5.6-terra',
-  'gpt-5.6-luna',
-  'gpt-6-astra',
-  'claude-opus-4-8',
-  'claude-sonnet-4-6',
+  'gpt-6-sol',
+  'gpt-6-luna',
+  'opus-5.5',
 ];
-const EXPECTED_CLAUDE_MODELS = new Set(['claude-opus-4-8', 'claude-sonnet-4-6']);
+const EXPECTED_CLAUDE_MODELS = new Set(['opus-5.5']);
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -190,19 +187,29 @@ test('DEFAULT_CODEX_MODEL is the first entry of CODEX_MODELS', () => {
   );
 });
 
-test('editor model registry exposes the GPT-5.6 family in canonical order and removes gpt-5.5 (issue #122)', () => {
+test('editor model registry exposes gpt-6-sol, gpt-6-luna, and opus-5.5 in canonical order', () => {
   assert.deepEqual(ALL_MODELS, EXPECTED_EDITOR_MODELS);
-  assert.equal(DEFAULT_CODEX_MODEL, 'gpt-5.6-sol');
+  assert.equal(DEFAULT_CODEX_MODEL, 'gpt-6-sol');
 });
 
-test('editor model registry exposes official gpt-6-astra as a Codex model without replacing the GPT-5.6 default', () => {
-  assert.equal(isCodexModel('gpt-6-astra'), true);
-  assert.equal(isClaudeModel('gpt-6-astra'), false);
-  assert.ok(CODEX_MODELS.includes('gpt-6-astra'));
-  assert.equal(CODEX_MODELS.indexOf('gpt-6-astra'), 3, 'gpt-6-astra must follow the GPT-5.6 family');
-  assert.equal(DEFAULT_CODEX_MODEL, 'gpt-5.6-sol');
-  assert.equal(ALL_MODELS.includes('gpt-5.4'), false);
-  assert.equal(ALL_MODELS.includes('gpt-5.5'), false);
+test('editor model registry drops the superseded GPT-5.6 family, gpt-6-astra, opus-5, and legacy claude-opus/sonnet identifiers', () => {
+  const dropped = [
+    'gpt-5.6-sol',
+    'gpt-5.6-terra',
+    'gpt-5.6-luna',
+    'gpt-6-astra',
+    'opus-5',
+    'claude-opus-4-8',
+    'claude-opus-4-7',
+    'claude-sonnet-4-6',
+    'gpt-5.5',
+    'gpt-5.4',
+  ];
+  for (const model of dropped) {
+    assert.equal(isCodexModel(model), false, `isCodexModel('${model}') must be false after the model refresh`);
+    assert.equal(isClaudeModel(model), false, `isClaudeModel('${model}') must be false after the model refresh`);
+    assert.equal(ALL_MODELS.includes(model), false, `ALL_MODELS must no longer include '${model}'`);
+  }
 });
 
 test('isClaudeModel correctly classifies every registered model', () => {
@@ -275,8 +282,8 @@ test('fake editor CLIs reject prompt paths that escape their workspace', async (
   const prompt = `Edit ${relativeOutside} only.`;
 
   try {
-    const codex = await runFakeCli(FAKE_CODEX_BIN, ['--model', 'gpt-5.6-sol', prompt], workspace);
-    const claude = await runFakeCli(FAKE_CLAUDE_BIN, ['-p', '--model', 'claude-opus-4-8', prompt], workspace);
+    const codex = await runFakeCli(FAKE_CODEX_BIN, ['--model', 'gpt-6-sol', prompt], workspace);
+    const claude = await runFakeCli(FAKE_CLAUDE_BIN, ['-p', '--model', 'opus-5.5', prompt], workspace);
     assert.equal(codex.code, 2, codex.output);
     assert.equal(claude.code, 2, claude.output);
     assert.equal(await readFile(outsideSlide, 'utf8'), outsideHtml);

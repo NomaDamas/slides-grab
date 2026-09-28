@@ -159,7 +159,7 @@ function applyBody({ mode, ...overrides } = {}) {
   const body = {
     slide: 'slide-01.html',
     prompt: 'Regenerate or edit the selected region.',
-    model: 'gpt-5.6-sol',
+    model: 'gpt-6-sol',
     selections: [{ x: 96, y: 54, width: 320, height: 180, targets: [] }],
     ...overrides,
   };
@@ -270,7 +270,7 @@ test('image server rejects a mismatched HTML payload before regeneration or meta
 
   try {
     await waitForServerReady(port, server.child, server.output);
-    const { response, body } = await postApply(port, applyBody({ mode: 'html', model: 'gpt-5.6-sol' }));
+    const { response, body } = await postApply(port, applyBody({ mode: 'html', model: 'gpt-6-sol' }));
 
     assert.equal(response.status, 400, JSON.stringify(body));
     assert.match(body.error, /Configured editor is image/);

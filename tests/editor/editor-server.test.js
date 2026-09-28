@@ -145,7 +145,7 @@ test('refuses to open a second editor when another slides-grab editor already ow
   }
 });
 
-test('/api/models exposes the GPT-5.6 family with Sol as default and removes gpt-5.5 (issue #122)', async () => {
+test('/api/models exposes gpt-6-sol, gpt-6-luna, and opus-5.5 with gpt-6-sol as default', async () => {
   const workspace = await createWorkspace();
   const port = await getAvailablePort();
   const server = spawnEditorServer(workspace, port);
@@ -158,29 +158,38 @@ test('/api/models exposes the GPT-5.6 family with Sol as default and removes gpt
     const body = await res.json();
 
     assert.deepEqual(body.models, [
-      'gpt-5.6-sol',
-      'gpt-5.6-terra',
-      'gpt-5.6-luna',
-      'gpt-6-astra',
-      'claude-opus-4-8',
-      'claude-sonnet-4-6',
+      'gpt-6-sol',
+      'gpt-6-luna',
+      'opus-5.5',
     ]);
-    assert.equal(body.defaultModel, 'gpt-5.6-sol');
-    assert.ok(body.models.includes('gpt-6-astra'));
+    assert.equal(body.defaultModel, 'gpt-6-sol');
+    assert.ok(body.models.includes('gpt-6-luna'));
   } finally {
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });
   }
 });
 
-test('/api/apply rejects removed GPT-5.5, GPT-5.4, and GPT-5.3 identifiers', async () => {
+test('/api/apply rejects the removed GPT-5.6 family, gpt-6-astra, opus-5, and legacy claude/gpt identifiers', async () => {
   const workspace = await createWorkspace();
   const port = await getAvailablePort();
   const server = spawnEditorServer(workspace, port);
 
   try {
     await waitForServerReady(port, server.child, server.output);
-    for (const model of ['gpt-5.5', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.3-codex-spark']) {
+    for (const model of [
+      'gpt-5.6-sol',
+      'gpt-5.6-terra',
+      'gpt-5.6-luna',
+      'gpt-6-astra',
+      'opus-5',
+      'claude-opus-4-8',
+      'claude-sonnet-4-6',
+      'gpt-5.5',
+      'gpt-5.4',
+      'gpt-5.3-codex',
+      'gpt-5.3-codex-spark',
+    ]) {
       const applyRes = await fetch(`http://localhost:${port}/api/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,11 +204,13 @@ test('/api/apply rejects removed GPT-5.5, GPT-5.4, and GPT-5.3 identifiers', asy
       const body = await applyRes.json();
       assert.equal(applyRes.status, 400, `model=${model} body=${JSON.stringify(body)}`);
       assert.match(body.error || '', /Invalid `model`/);
-      assert.match(body.error || '', /gpt-5\.6-sol/);
-      assert.match(body.error || '', /gpt-5\.6-terra/);
-      assert.match(body.error || '', /gpt-5\.6-luna/);
-      assert.match(body.error || '', /gpt-6-astra/);
-      assert.doesNotMatch(body.error || '', /gpt-5\.(?:5|4|3)/);
+      assert.match(body.error || '', /gpt-6-sol/);
+      assert.match(body.error || '', /gpt-6-luna/);
+      assert.match(body.error || '', /opus-5\.5/);
+      assert.doesNotMatch(body.error || '', /gpt-5\.(?:6|5|4|3)/);
+      assert.doesNotMatch(body.error || '', /gpt-6-astra/);
+      assert.doesNotMatch(body.error || '', /opus-5(?!\.5)/);
+      assert.doesNotMatch(body.error || '', /claude-(?:opus|sonnet)/);
     }
   } finally {
     await stopChild(server.child);
@@ -270,7 +281,7 @@ test('/api/apply injects DESIGN.slides.md from the active --slides-dir, not laun
   }
 });
 
-test('/api/apply routes claude-opus-4-8 through the claude CLI with --model claude-opus-4-8 (issue #88)', async () => {
+test('/api/apply routes opus-5.5 through the claude CLI with --model opus-5.5', async () => {
   const workspace = await createWorkspace();
   const mockClaude = await writeMockCli(workspace, 'mock-claude.js');
   const port = await getAvailablePort();
@@ -289,7 +300,7 @@ test('/api/apply routes claude-opus-4-8 through the claude CLI with --model clau
       body: JSON.stringify({
         slide: 'slide-01.html',
         prompt: 'Upgrade the title styling.',
-        model: 'claude-opus-4-8',
+        model: 'opus-5.5',
         selections: [
           {
             x: 40,
@@ -310,21 +321,21 @@ test('/api/apply routes claude-opus-4-8 through the claude CLI with --model clau
 
     const applyBody = await applyRes.json();
     assert.equal(applyRes.status, 200, JSON.stringify(applyBody));
-    assert.equal(applyBody.success, true, `claude-opus-4-8 edit should succeed: ${JSON.stringify(applyBody)}`);
+    assert.equal(applyBody.success, true, `opus-5.5 edit should succeed: ${JSON.stringify(applyBody)}`);
 
     const logRes = await fetch(`http://localhost:${port}/api/runs/${applyBody.runId}/log`);
     assert.equal(logRes.status, 200);
     const log = await logRes.text();
 
     assert.match(log, /Upgrade the title styling\./);
-    assert.match(log, /--model claude-opus-4-8/);
+    assert.match(log, /--model opus-5\.5/);
   } finally {
     await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true });
   }
 });
 
-test('/api/apply rejects the superseded claude-opus-4-7 identifier (issue #88)', async () => {
+test('/api/apply rejects the superseded claude-opus-4-8, claude-opus-4-7, and claude-sonnet-4-6 identifiers', async () => {
   const workspace = await createWorkspace();
   const port = await getAvailablePort();
   const server = spawnEditorServer(workspace, port);
@@ -359,8 +370,12 @@ test('/api/apply rejects the superseded claude-opus-4-7 identifier (issue #88)',
       `error.Allowed models list should no longer mention 'claude-opus-4-7'. Got: ${body.error}`,
     );
     assert.ok(
-      (body.error || '').includes('claude-opus-4-8'),
-      `error.Allowed models list should mention 'claude-opus-4-8'. Got: ${body.error}`,
+      !(body.error || '').includes('claude-opus-4-8') && !(body.error || '').includes('claude-sonnet-4-6'),
+      `error.Allowed models list should no longer mention legacy claude identifiers. Got: ${body.error}`,
+    );
+    assert.ok(
+      (body.error || '').includes('opus-5.5'),
+      `error.Allowed models list should mention 'opus-5.5'. Got: ${body.error}`,
     );
   } finally {
     await stopChild(server.child);

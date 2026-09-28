@@ -309,41 +309,44 @@ test('buildCodexEditPrompt switches sizing guidance for card-news mode', () => {
   assert.match(prompt, /Keep slide dimensions at 720pt x 720pt\./);
 });
 
-test('CLAUDE_MODELS exposes claude-opus-4-8 as the bbox-editor Opus option (issue #88)', () => {
+test('CLAUDE_MODELS exposes opus-5.5 as the bbox-editor Opus option (issue #88)', () => {
   assert.ok(
-    CLAUDE_MODELS.includes('claude-opus-4-8'),
-    `CLAUDE_MODELS should include 'claude-opus-4-8' so the editor dropdown can route edits to Opus 4.8. Got: ${JSON.stringify(CLAUDE_MODELS)}`,
+    CLAUDE_MODELS.includes('opus-5.5'),
+    `CLAUDE_MODELS should include 'opus-5.5' so the editor dropdown can route edits to Opus 5.5. Got: ${JSON.stringify(CLAUDE_MODELS)}`,
   );
 });
 
 test('CLAUDE_MODELS drops the superseded claude-opus-4-7 identifier (issue #88)', () => {
   assert.ok(
     !CLAUDE_MODELS.includes('claude-opus-4-7'),
-    `CLAUDE_MODELS should no longer include 'claude-opus-4-7' after the Opus 4.8 upgrade. Got: ${JSON.stringify(CLAUDE_MODELS)}`,
+    `CLAUDE_MODELS should no longer include 'claude-opus-4-7' after the Opus 5.5 upgrade. Got: ${JSON.stringify(CLAUDE_MODELS)}`,
   );
 });
 
-test('CLAUDE_MODELS still exposes claude-sonnet-4-6 (there is no Sonnet 4.7 yet)', () => {
+test('CLAUDE_MODELS drops the superseded claude-sonnet-4-6 identifier', () => {
   assert.ok(
-    CLAUDE_MODELS.includes('claude-sonnet-4-6'),
-    `CLAUDE_MODELS should still include 'claude-sonnet-4-6' because Sonnet 4.7 does not exist. Got: ${JSON.stringify(CLAUDE_MODELS)}`,
+    !CLAUDE_MODELS.includes('claude-sonnet-4-6'),
+    `CLAUDE_MODELS should no longer include 'claude-sonnet-4-6' after the opus-5.5 model refresh. Got: ${JSON.stringify(CLAUDE_MODELS)}`,
   );
 });
 
-test('isClaudeModel recognizes claude-opus-4-8 after the upgrade', () => {
-  assert.equal(isClaudeModel('claude-opus-4-8'), true);
-  assert.equal(isClaudeModel('  claude-opus-4-8  '), true);
+test('isClaudeModel recognizes opus-5.5 after the upgrade', () => {
+  assert.equal(isClaudeModel('opus-5.5'), true);
+  assert.equal(isClaudeModel('  opus-5.5  '), true);
 });
 
-test('isClaudeModel rejects the dropped claude-opus-4-7 identifier', () => {
+test('isClaudeModel rejects the dropped claude-opus-4-7, claude-opus-4-8, and claude-sonnet-4-6 identifiers', () => {
   assert.equal(isClaudeModel('claude-opus-4-7'), false);
+  assert.equal(isClaudeModel('claude-opus-4-8'), false);
+  assert.equal(isClaudeModel('claude-sonnet-4-6'), false);
+  assert.equal(isClaudeModel('opus-5'), false);
 });
 
-test('buildClaudeExecArgs forwards claude-opus-4-8 to the claude CLI --model flag', () => {
+test('buildClaudeExecArgs forwards opus-5.5 to the claude CLI --model flag', () => {
   const args = withClaudePermissionEnv({}, () => buildClaudeExecArgs({
     prompt: 'Edit slide',
     imagePath: '/tmp/slide-annotated.png',
-    model: 'claude-opus-4-8',
+    model: 'opus-5.5',
   }));
 
   assert.deepEqual(args, [
@@ -351,7 +354,7 @@ test('buildClaudeExecArgs forwards claude-opus-4-8 to the claude CLI --model fla
     '--permission-mode',
     'acceptEdits',
     '--model',
-    'claude-opus-4-8',
+    'opus-5.5',
     '--max-turns',
     '30',
     '--verbose',
@@ -363,14 +366,14 @@ test('buildClaudeExecArgs keeps dangerous skip permissions as an explicit opt-in
   const args = withClaudePermissionEnv({ skipPermissions: '1' }, () => buildClaudeExecArgs({
     prompt: 'Edit slide',
     imagePath: '',
-    model: 'claude-opus-4-8',
+    model: 'opus-5.5',
   }));
 
   assert.deepEqual(args, [
     '-p',
     '--dangerously-skip-permissions',
     '--model',
-    'claude-opus-4-8',
+    'opus-5.5',
     '--max-turns',
     '30',
     '--verbose',
@@ -382,7 +385,7 @@ test('buildClaudeExecArgs uses configurable Claude permission mode for OAuth-fri
   const args = withClaudePermissionEnv({ permissionMode: 'acceptEdits' }, () => buildClaudeExecArgs({
     prompt: 'Edit slide',
     imagePath: '',
-    model: 'claude-opus-4-8',
+    model: 'opus-5.5',
   }));
 
   assert.deepEqual(args, [
@@ -390,7 +393,7 @@ test('buildClaudeExecArgs uses configurable Claude permission mode for OAuth-fri
     '--permission-mode',
     'acceptEdits',
     '--model',
-    'claude-opus-4-8',
+    'opus-5.5',
     '--max-turns',
     '30',
     '--verbose',
@@ -398,31 +401,31 @@ test('buildClaudeExecArgs uses configurable Claude permission mode for OAuth-fri
   ]);
 });
 
-test('DEFAULT_MODELS exposes claude-opus-4-8 as the Claude Opus fallback (issue #88)', () => {
+test('DEFAULT_MODELS exposes opus-5.5 as the Claude Opus fallback (issue #88)', () => {
   assert.ok(
-    DEFAULT_MODELS.includes('claude-opus-4-8'),
-    `DEFAULT_MODELS should include 'claude-opus-4-8' so the editor UI dropdown falls back to Opus 4.8 when /api/models is unreachable. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
+    DEFAULT_MODELS.includes('opus-5.5'),
+    `DEFAULT_MODELS should include 'opus-5.5' so the editor UI dropdown falls back to Opus 5.5 when /api/models is unreachable. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
   );
 });
 
 test('DEFAULT_MODELS drops the superseded claude-opus-4-7 identifier (issue #88)', () => {
   assert.ok(
     !DEFAULT_MODELS.includes('claude-opus-4-7'),
-    `DEFAULT_MODELS should no longer include 'claude-opus-4-7' after the Opus 4.8 upgrade. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
+    `DEFAULT_MODELS should no longer include 'claude-opus-4-7' after the Opus 5.5 upgrade. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
   );
 });
 
-test('static editor fallback select exposes claude-opus-4-8 and not superseded claude-opus-4-7 (issue #88)', () => {
+test('static editor fallback select exposes opus-5.5 and not superseded claude-opus-4-7 (issue #88)', () => {
   const html = readFileSync(new URL('../../src/editor/editor.html', import.meta.url), 'utf8');
 
-  assert.match(html, /<option value="claude-opus-4-8">claude-opus-4-8<\/option>/);
+  assert.match(html, /<option value="opus-5.5">opus-5.5<\/option>/);
   assert.doesNotMatch(html, /<option value="claude-opus-4-7">claude-opus-4-7<\/option>/);
 });
 
-test('DEFAULT_MODELS still exposes claude-sonnet-4-6 (there is no Sonnet 4.7 yet)', () => {
+test('DEFAULT_MODELS drops the superseded claude-sonnet-4-6 identifier', () => {
   assert.ok(
-    DEFAULT_MODELS.includes('claude-sonnet-4-6'),
-    `DEFAULT_MODELS should still include 'claude-sonnet-4-6' because Sonnet 4.7 does not exist. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
+    !DEFAULT_MODELS.includes('claude-sonnet-4-6'),
+    `DEFAULT_MODELS should no longer include 'claude-sonnet-4-6' after the opus-5.5 model refresh. Got: ${JSON.stringify(DEFAULT_MODELS)}`,
   );
 });
 

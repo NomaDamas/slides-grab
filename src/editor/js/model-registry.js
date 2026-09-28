@@ -11,14 +11,9 @@
 //      verify the new model dispatches correctly through the editor pipeline.
 //      No per-model test additions needed.
 
-export const CODEX_MODELS = [
-  'gpt-5.6-sol',
-  'gpt-5.6-terra',
-  'gpt-5.6-luna',
-  'gpt-6-astra',
-];
+export const CODEX_MODELS = ['gpt-6-sol', 'gpt-6-luna'];
 
-export const CLAUDE_MODELS = ['claude-opus-4-8', 'claude-sonnet-4-6'];
+export const CLAUDE_MODELS = ['opus-5.5'];
 
 export const ALL_MODELS = [...CODEX_MODELS, ...CLAUDE_MODELS];
 
