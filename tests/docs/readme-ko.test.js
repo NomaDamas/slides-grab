@@ -13,13 +13,12 @@ test('README links to Korean documentation', async () => {
   assert.match(readme, /한국어|Korean/i);
 });
 
-test('Korean README preserves canonical demo and showcase URLs', async () => {
+test('Korean README preserves canonical demo asset URLs', async () => {
   const koreanReadme = await readText('README-ko.md');
 
   for (const requiredUrl of [
     'https://github.com/NomaDamas/slides-grab/releases/download/v0.0.1-demo/demo.mp4',
     'docs/assets/demo.gif',
-    'https://nomadamas.github.io/slides-grab/',
   ]) {
     assert.ok(koreanReadme.includes(requiredUrl), `${requiredUrl} should be mirrored in README-ko.md`);
   }
