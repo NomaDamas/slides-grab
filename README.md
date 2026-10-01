@@ -40,7 +40,7 @@ The editor is pure javascript file. You can easily add up new features like addi
 
 <p align="center">
   <strong>👉 See what slides-grab can do:</strong>
-  <a href="https://nomadamas.github.io/slides-grab/"><strong>Live Showcase Gallery</strong></a><br>
+  <a href="https://blog.nomadamas.org/slides-grab/"><strong>Live Showcase Gallery</strong></a><br>
   Real presentations built with slides-grab — open any deck and flip through the slides.
 </p>
 
@@ -320,7 +320,7 @@ templates/        Slide HTML templates (cover, content, chart, ...)
 src/              Design styles data, style config, path resolution
 skills/           Shared Vercel-installable agent skills + references
 docs/             Installation & usage guides
-showcase/         Static gallery deployed to GitHub Pages (https://nomadamas.github.io/slides-grab/)
+showcase/         Static gallery deployed to GitHub Pages (https://blog.nomadamas.org/slides-grab/)
 ```
 
 ## License

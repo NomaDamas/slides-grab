@@ -14,7 +14,7 @@
 
 <p align="center">
   <strong>👉 slides-grab으로 무엇을 만들 수 있는지 확인하세요:</strong>
-  <a href="https://nomadamas.github.io/slides-grab/"><strong>라이브 쇼케이스 갤러리</strong></a><br>
+  <a href="https://blog.nomadamas.org/slides-grab/"><strong>라이브 쇼케이스 갤러리</strong></a><br>
   slides-grab으로 만든 실제 발표 자료를 열고 슬라이드를 넘겨볼 수 있습니다.
 </p>
 
