@@ -18,6 +18,10 @@
   slides-grab으로 만든 실제 발표 자료를 열고 슬라이드를 넘겨볼 수 있습니다.
 </p>
 
+<p align="center">
+  사용기: <a href="https://blog.nomadamas.org/posts/slides-grab-ppt-ai/">PPT 만들어주는 AI, slides-grab으로 고칠 곳만 드래그해 수정하기</a>
+</p>
+
 ---
 
 ## 빠른 시작

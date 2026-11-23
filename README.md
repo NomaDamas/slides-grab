@@ -44,6 +44,10 @@ The editor is pure javascript file. You can easily add up new features like addi
   Real presentations built with slides-grab — open any deck and flip through the slides.
 </p>
 
+<p align="center">
+  Hands-on walkthrough (Korean): <a href="https://blog.nomadamas.org/posts/slides-grab-ppt-ai/">slides-grab on the NomaDamas blog</a>
+</p>
+
 ---
 
 ## Quick Start
